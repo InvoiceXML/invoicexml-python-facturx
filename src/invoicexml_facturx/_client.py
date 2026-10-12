@@ -68,7 +68,7 @@ class FacturXClient:
         key = api_key if api_key is not None else os.environ.get(API_KEY_ENV)
         if not key or not key.strip():
             raise ValueError(f"An API key is required. Pass api_key or set {API_KEY_ENV}. "
-                             "Get one at https://invoicexml.com/account/signup")
+                             "Get one at https://www.invoicexml.com/account/signup")
         if not base_url or not base_url.strip():
             raise ValueError("base_url must not be empty")
         if max_retries < 0:

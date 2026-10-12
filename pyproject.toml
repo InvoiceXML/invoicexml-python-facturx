@@ -30,7 +30,7 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://invoicexml.com"
+Homepage = "https://www.invoicexml.com"
 Documentation = "https://api.invoicexml.com/v1/scalar/"
 Repository = "https://github.com/InvoiceXML/invoicexml-python-facturx"
 Issues = "https://github.com/InvoiceXML/invoicexml-python-facturx/issues"
