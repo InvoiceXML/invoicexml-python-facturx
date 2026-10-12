@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Link the website at https://www.invoicexml.com in the package metadata, the README and error messages.
+
 ## 0.1.0
 
 First release.
