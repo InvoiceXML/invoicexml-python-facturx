@@ -1,0 +1,25 @@
+{
+  "valid": true,
+  "detail": "Your invoice is ZUGFeRD, Factur-X and EN16931 compliant",
+  "data": {
+    "hasEmbeddedXml": true,
+    "schemaValid": true,
+    "schematronValid": true,
+    "conformanceLevel": "EN16931",
+    "profile": "en16931",
+    "customizationId": "urn:cen.eu:en16931:2017"
+  },
+  "errors": [],
+  "warnings": [],
+  "report": [
+    {
+      "name": "Invoice number",
+      "section": "header",
+      "path": "invoiceNumber",
+      "value": "FA-2026-0042",
+      "isValid": true,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}

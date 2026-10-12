@@ -1,0 +1,26 @@
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "detail": "The request failed validation with 1 error(s).",
+  "traceId": "00-abc-def-01",
+  "valid": false,
+  "errorCode": 4002,
+  "errors": [
+    {
+      "rule": "BR-CO-26",
+      "layer": "en16931",
+      "line": null,
+      "message": "The seller needs a VAT identifier, tax registration identifier or legal registration identifier.",
+      "btCodes": [],
+      "fields": ["seller.vatIdentifier"],
+      "raw": null
+    }
+  ],
+  "warnings": [],
+  "invoiceData": {
+    "invoiceNumber": "RE-2026-001",
+    "currency": "EUR",
+    "typeCode": "380"
+  }
+}

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "invoicexml-facturx"
+version = "0.1.0"
+description = "Python client for Factur-X e-invoices: create Factur-X PDF/A-3 from EN 16931 data, validate (including the French BR-FR rules), embed and extract, via the InvoiceXML API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "InvoiceXML", email = "support@invoicexml.com" }]
+keywords = ["factur-x", "facturx", "facture electronique", "e-invoicing", "einvoice", "en16931", "br-fr", "cii", "pdf/a-3", "invoice"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://invoicexml.com"
+Documentation = "https://api.invoicexml.com/v1/scalar/"
+Repository = "https://github.com/InvoiceXML/invoicexml-python-facturx"
+Issues = "https://github.com/InvoiceXML/invoicexml-python-facturx/issues"
+Changelog = "https://github.com/InvoiceXML/invoicexml-python-facturx/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/invoicexml_facturx"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "tools", "README.md", "CHANGELOG.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+markers = ["live: calls the real API and consumes credits (opt in with INVOICEXML_LIVE=1)"]

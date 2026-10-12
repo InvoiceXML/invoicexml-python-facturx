@@ -1,0 +1,44 @@
+{
+  "invoice": {
+    "invoiceNumber": "FA-2026-0042",
+    "issueDate": "2026-09-01",
+    "typeCode": "380",
+    "currency": "EUR",
+    "notes": [
+      "Plain note",
+      { "note": "Escompte pour paiement anticipe : neant", "subjectCode": "AAB" }
+    ],
+    "supportingDocuments": [
+      { "reference": "BL-77", "attachment": "aGVsbG8=", "attachmentMimeCode": "text/csv", "attachmentFilename": "bon.csv" }
+    ],
+    "seller": {
+      "name": "Atelier Numerique SARL",
+      "vatIdentifier": "FR32123456789",
+      "legalRegistration": { "identifier": "123456789", "schemeId": "0002" },
+      "electronicAddress": { "identifier": "factures@atelier-numerique.fr", "schemeId": "EM" },
+      "postalAddress": { "city": "Lyon", "country": "FR" }
+    },
+    "buyer": {
+      "name": "Librairie Grand Siecle SAS",
+      "postalAddress": { "city": "Paris", "country": "FR" }
+    },
+    "paymentDetails": { "paymentMeansCode": "58", "paymentAccountIdentifier": "FR7630006000011234567890189" },
+    "totals": { "grandTotalAmount": 3541.50, "duePayableAmount": 3541.50 },
+    "vatBreakdowns": [
+      { "taxableAmount": 2160.00, "taxAmount": 432.00, "categoryCode": "S", "rate": 20 },
+      { "taxableAmount": 900.00, "taxAmount": 49.50, "categoryCode": "S", "rate": 5.5 }
+    ],
+    "lines": [
+      {
+        "lineId": "1",
+        "quantity": 12,
+        "unitCode": "C62",
+        "lineNetAmount": 2160.00,
+        "item": { "name": "Maintenance applicative" },
+        "priceDetails": { "netPrice": 180.00 },
+        "vatInformation": { "categoryCode": "S", "rate": 20 }
+      }
+    ]
+  },
+  "confidence": null
+}

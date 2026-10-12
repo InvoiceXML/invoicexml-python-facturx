@@ -1,0 +1,186 @@
+{
+  "AdditionalSupportingDocument": {
+    "reference": "Supporting document reference.",
+    "schemeId": "Scheme identifier. Identification scheme of the reference. Only meaningful for invoiced object identifiers (document type code 130).",
+    "documentTypeCode": "Document type code. UNTDID 1001 code: 916 related document (the default), 50 tender or lot reference, 130 invoiced object identifier.",
+    "description": "Supporting document description.",
+    "externalUri": "External document location. URL where the document can be downloaded.",
+    "attachment": "Attached document. The embedded document.",
+    "attachmentMimeCode": "Attached document mime code.",
+    "attachmentFilename": "Attached document filename."
+  },
+  "BuyerContact": {
+    "name": "Buyer contact point.",
+    "phone": "Buyer contact telephone number.",
+    "email": "Buyer contact email address."
+  },
+  "BuyerParty": {
+    "name": "Buyer name.",
+    "tradingName": "Buyer trading name.",
+    "vatIdentifier": "Buyer VAT identifier."
+  },
+  "BuyerPostalAddress": {
+    "line1": "Buyer address line 1.",
+    "line2": "Buyer address line 2.",
+    "line3": "Buyer address line 3.",
+    "city": "Buyer city.",
+    "postCode": "Buyer post code.",
+    "countrySubdivision": "Buyer country subdivision.",
+    "country": "Buyer country code."
+  },
+  "DeliveryInformation": {
+    "receiverName": "Deliver-to party name.",
+    "locationIdentifier": "Deliver-to location identifier.",
+    "locationIdentifierSchemeId": "Deliver-to location identifier scheme. ISO 6523 ICD scheme of the location identifier.",
+    "actualDeliveryDate": "Actual delivery date."
+  },
+  "DeliveryPostalAddress": {
+    "line1": "Deliver-to address line 1.",
+    "line2": "Deliver-to address line 2.",
+    "line3": "Deliver-to address line 3.",
+    "city": "Deliver-to city.",
+    "postCode": "Deliver-to post code.",
+    "countrySubdivision": "Deliver-to country subdivision.",
+    "country": "Deliver-to country code."
+  },
+  "DocumentLevelAllowance": {
+    "amount": "Document level allowance amount.",
+    "baseAmount": "Document level allowance base amount.",
+    "percentage": "Document level allowance percentage.",
+    "vatCategoryCode": "Document level allowance VAT category code.",
+    "vatRate": "Document level allowance VAT rate.",
+    "reason": "Document level allowance reason.",
+    "reasonCode": "Document level allowance reason code."
+  },
+  "DocumentLevelCharge": {
+    "amount": "Document level charge amount.",
+    "baseAmount": "Document level charge base amount.",
+    "percentage": "Document level charge percentage.",
+    "vatCategoryCode": "Document level charge VAT category code.",
+    "vatRate": "Document level charge VAT rate.",
+    "reason": "Document level charge reason.",
+    "reasonCode": "Document level charge reason code."
+  },
+  "DocumentTotals": {
+    "sumOfLineNetAmounts": "Sum of Invoice line net amount.",
+    "sumOfAllowances": "Sum of allowances on document level.",
+    "sumOfCharges": "Sum of charges on document level.",
+    "taxBasisTotalAmount": "Invoice total amount without VAT.",
+    "taxTotalAmount": "Invoice total VAT amount.",
+    "taxTotalAmountInAccountingCurrency": "Invoice total VAT amount in accounting currency.",
+    "grandTotalAmount": "Invoice total amount with VAT.",
+    "paidAmount": "Paid amount.",
+    "roundingAmount": "Rounding amount.",
+    "duePayableAmount": "Amount due for payment."
+  },
+  "InvoiceDocument": {
+    "invoiceNumber": "Invoice number.",
+    "issueDate": "Invoice issue date.",
+    "dueDate": "Payment due date.",
+    "typeCode": "Invoice type code.",
+    "currency": "Invoice currency code.",
+    "taxCurrency": "VAT accounting currency code.",
+    "specificationId": "Specification identifier.",
+    "businessProcessType": "Business process type.",
+    "buyerReference": "Buyer reference. Carries the Leitweg-ID in XRechnung.",
+    "purchaseOrderReference": "Purchase order reference.",
+    "notes": "Invoice note. Each entry carries the note text and an optional UNTDID 4451 subject code.",
+    "vatPointDateCode": "Value added tax point date code. UNTDID 2005 code stating when VAT becomes due: 3 issue date, 35 delivery date, 432 paid to date."
+  },
+  "InvoiceLine": {
+    "lineId": "Invoice line identifier.",
+    "lineNote": "Invoice line note.",
+    "quantity": "Invoiced quantity.",
+    "unitCode": "Invoiced quantity unit of measure code.",
+    "lineNetAmount": "Invoice line net amount.",
+    "buyerOrderLineReference": "Referenced purchase order line reference.",
+    "lineBuyerAccountingReference": "Invoice line Buyer accounting reference."
+  },
+  "InvoiceLinePeriod": {
+    "startDate": "Invoice line period start date.",
+    "endDate": "Invoice line period end date."
+  },
+  "InvoiceNote": {
+    "note": "Invoice note.",
+    "subjectCode": "Invoice note subject code. UNTDID 4451 code qualifying the note, for example PMT (recovery costs), PMD (late-payment penalties) or AAB (discount terms), the mentions French invoices must carry."
+  },
+  "InvoicingPeriod": {
+    "startDate": "Invoicing period start date.",
+    "endDate": "Invoicing period end date."
+  },
+  "ItemInformation": {
+    "name": "Item name.",
+    "description": "Item description.",
+    "sellerIdentifier": "Item Seller's identifier.",
+    "buyerIdentifier": "Item Buyer's identifier.",
+    "countryOfOrigin": "Item country of origin."
+  },
+  "LineAllowance": {
+    "amount": "Invoice line allowance amount.",
+    "baseAmount": "Invoice line allowance base amount.",
+    "percentage": "Invoice line allowance percentage.",
+    "reason": "Invoice line allowance reason.",
+    "reasonCode": "Invoice line allowance reason code."
+  },
+  "LineCharge": {
+    "amount": "Invoice line charge amount.",
+    "baseAmount": "Invoice line charge base amount.",
+    "percentage": "Invoice line charge percentage.",
+    "reason": "Invoice line charge reason.",
+    "reasonCode": "Invoice line charge reason code."
+  },
+  "LineVatInformation": {
+    "categoryCode": "Invoiced item VAT category code.",
+    "rate": "Invoiced item VAT rate."
+  },
+  "PaymentDetails": {
+    "paymentMeansCode": "Payment means type code.",
+    "paymentMeansText": "Payment means text.",
+    "remittanceInformation": "Remittance information.",
+    "paymentAccountIdentifier": "Payment account identifier. IBAN or proprietary account number.",
+    "paymentAccountName": "Payment account name.",
+    "bic": "Payment service provider identifier. BIC of the payee's payment service provider.",
+    "mandateReference": "Mandate reference identifier.",
+    "paymentTerms": "Payment terms."
+  },
+  "PrecedingInvoiceReference": {
+    "reference": "Preceding Invoice reference.",
+    "issueDate": "Preceding Invoice issue date."
+  },
+  "PriceDetails": {
+    "netPrice": "Item net price.",
+    "discountAmount": "Item price discount.",
+    "grossPrice": "Item gross price.",
+    "priceBaseQuantity": "Item price base quantity.",
+    "priceBaseUnit": "Item price base quantity unit of measure code."
+  },
+  "SellerContact": {
+    "name": "Seller contact point.",
+    "phone": "Seller contact telephone number.",
+    "email": "Seller contact email address."
+  },
+  "SellerParty": {
+    "name": "Seller name.",
+    "tradingName": "Seller trading name.",
+    "vatIdentifier": "Seller VAT identifier.",
+    "taxRegistrationIdentifier": "Seller tax registration identifier.",
+    "additionalLegalInformation": "Seller additional legal information."
+  },
+  "SellerPostalAddress": {
+    "line1": "Seller address line 1.",
+    "line2": "Seller address line 2.",
+    "line3": "Seller address line 3.",
+    "city": "Seller city.",
+    "postCode": "Seller post code.",
+    "countrySubdivision": "Seller country subdivision.",
+    "country": "Seller country code."
+  },
+  "VatBreakdown": {
+    "taxableAmount": "VAT category taxable amount.",
+    "taxAmount": "VAT category tax amount.",
+    "categoryCode": "VAT category code.",
+    "rate": "VAT category rate.",
+    "exemptionReasonText": "VAT exemption reason text.",
+    "exemptionReasonCode": "VAT exemption reason code."
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "valid": false,
+  "detail": "Invoice validation failed with 1 error(s).",
+  "data": {
+    "hasEmbeddedXml": true,
+    "schemaValid": true,
+    "schematronValid": false,
+    "conformanceLevel": "EN16931",
+    "profile": "basic",
+    "customizationId": "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic"
+  },
+  "errors": [
+    {
+      "rule": "BR-CO-10",
+      "layer": "en16931",
+      "line": null,
+      "message": "The sum of the line net amounts does not match the invoice lines.",
+      "btCodes": [],
+      "fields": ["totals.sumOfLineNetAmounts"],
+      "raw": "[BR-CO-10] Sum of Invoice line net amount does not match."
+    }
+  ],
+  "warnings": [
+    {
+      "rule": "PROFILE-SCOPE",
+      "layer": "cius",
+      "line": 2,
+      "message": "Advisory.",
+      "btCodes": [],
+      "fields": [],
+      "raw": null
+    }
+  ],
+  "report": [
+    {
+      "name": "Sum of invoice line net amount",
+      "section": "totals",
+      "path": "totals.sumOfLineNetAmounts",
+      "value": "3000.00",
+      "isValid": false,
+      "errors": [{ "rule": "BR-CO-10", "message": "The sum of the line net amounts does not match the invoice lines." }],
+      "warnings": []
+    }
+  ],
+  "futureField": "ignored"
+}

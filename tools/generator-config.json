@@ -1,0 +1,25 @@
+{
+  "module": "src/invoicexml_facturx/models.py",
+  "roots": ["CreateInvoiceRequest"],
+  "excludeProperties": {
+    "InvoiceOptions": ["profile", "syntax"]
+  },
+  "stringEnums": {
+    "InvoiceOptions.rules": {
+      "type": "RuleSet",
+      "doc": "Extra national rule sets, validated on top of the rules of the profile an invoice declares.",
+      "values": { "BR_FR": "br-fr" },
+      "valueDocs": { "BR_FR": "The BR-FR rules of the French e-invoicing mandate. Needs at least the BASIC profile." }
+    }
+  },
+  "propertyDocs": {
+    "CreateInvoiceRequest.invoice": "The invoice to create.",
+    "CreateInvoiceRequest.options": "Optional rendering and processing settings. Defaults apply when omitted.",
+    "InvoiceOptions.rules": "Extra rule sets to validate the invoice against, on top of the rules of its declared profile and without changing that profile. ``RuleSet.BR_FR`` applies the French mandate's BR-FR rules and needs at least the BASIC profile. Violations reject the request with the official rule identifiers.",
+    "InvoiceOptions.language": "Language of the rendered PDF template. English when omitted.",
+    "InvoiceOptions.brandColor": "Primary brand colour in ``#RRGGBB`` form, applied to headings and accent backgrounds of the rendered PDF template. Body text is never recoloured.",
+    "InvoiceOptions.pdfUrl": "Public http(s) URL of your own PDF to use as the visual layer. The generated XML is embedded into that PDF instead of the rendered template, so ``language``, ``brand_color``, ``logo_url`` and ``include_advanced_properties`` are ignored.",
+    "InvoiceOptions.logoUrl": "Public URL of the seller's logo (PNG or JPEG, at most 2 MB and 4 megapixels), printed top left on the rendered PDF template and scaled to fit a 170 x 48 pt box.",
+    "InvoiceOptions.includeAdvancedProperties": "When true, the rendered PDF gains an \"Electronic invoice details\" section listing technical properties that a classic layout does not show, such as the specification identifier, the business process, party identifiers and electronic addresses. Defaults to false."
+  }
+}

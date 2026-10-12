@@ -1,0 +1,1721 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "InvoiceXML API",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {
+      "AdditionalSupportingDocument": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "documentTypeCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "externalUri": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachment": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
+          },
+          "attachmentMimeCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentFilename": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BuyerContact": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BuyerElectronicAddress": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BuyerIdentifier": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BuyerLegalRegistration": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BuyerParty": {
+        "required": [
+          "name",
+          "postalAddress"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tradingName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuyerPostalAddress"
+              }
+            ]
+          },
+          "contact": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuyerContact"
+              }
+            ]
+          },
+          "identifiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuyerIdentifier"
+            }
+          },
+          "legalRegistration": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuyerLegalRegistration"
+              }
+            ]
+          },
+          "vatIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "electronicAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuyerElectronicAddress"
+              }
+            ]
+          }
+        }
+      },
+      "BuyerPostalAddress": {
+        "required": [
+          "country"
+        ],
+        "type": "object",
+        "properties": {
+          "line1": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "line2": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "line3": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "countrySubdivision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "country": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CountryCode"
+              }
+            ]
+          }
+        }
+      },
+      "CountryCode": {
+        "type": "integer"
+      },
+      "CreateInvoiceRequest": {
+        "required": [
+          "invoice"
+        ],
+        "type": "object",
+        "properties": {
+          "invoice": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InvoiceDocument"
+              }
+            ]
+          },
+          "options": {
+            "$ref": "#/components/schemas/InvoiceOptions"
+          }
+        },
+        "example": {
+          "invoice": {
+            "invoiceNumber": "INV-2026-00045",
+            "issueDate": "2026-05-17",
+            "currency": "EUR",
+            "seller": {
+              "name": "Acme Engineering GmbH",
+              "vatIdentifier": "DE123456789",
+              "legalRegistration": "HRB 12345",
+              "postalAddress": {
+                "line1": "Hauptstra\u00dfe 12",
+                "city": "Berlin",
+                "postCode": "10115",
+                "country": "DE"
+              }
+            },
+            "buyer": {
+              "name": "Globex SAS",
+              "postalAddress": {
+                "line1": "15 rue de Rivoli",
+                "city": "Paris",
+                "postCode": "75001",
+                "country": "FR"
+              }
+            },
+            "paymentDetails": {
+              "paymentAccountIdentifier": "DE89370400440532013000"
+            },
+            "lines": [
+              {
+                "quantity": 10,
+                "priceDetails": {
+                  "netPrice": 150
+                },
+                "vatInformation": {
+                  "rate": 19
+                },
+                "item": {
+                  "name": "Senior consulting"
+                }
+              }
+            ]
+          },
+          "options": {
+            "language": "EN",
+            "brandColor": "#0F766E"
+          }
+        }
+      },
+      "CurrencyCode": {
+        "type": "integer"
+      },
+      "DeliveryInformation": {
+        "type": "object",
+        "properties": {
+          "receiverName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "locationIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "locationIdentifierSchemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actualDeliveryDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "deliveryAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DeliveryPostalAddress"
+              }
+            ]
+          }
+        }
+      },
+      "DeliveryPostalAddress": {
+        "type": "object",
+        "properties": {
+          "line1": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "line2": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "line3": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "countrySubdivision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "country": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CountryCode"
+              }
+            ]
+          }
+        }
+      },
+      "DocumentLevelAllowance": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "baseAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "vatCategoryCode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VatCategoryCode"
+              }
+            ]
+          },
+          "vatRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DocumentLevelCharge": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "baseAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "vatCategoryCode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VatCategoryCode"
+              }
+            ]
+          },
+          "vatRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DocumentTotals": {
+        "type": "object",
+        "properties": {
+          "sumOfLineNetAmounts": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sumOfAllowances": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sumOfCharges": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "taxBasisTotalAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "taxTotalAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "taxTotalAmountInAccountingCurrency": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "grandTotalAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "paidAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "roundingAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "duePayableAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "InvoiceDocument": {
+        "required": [
+          "invoiceNumber",
+          "currency",
+          "seller",
+          "buyer",
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "invoiceNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "typeCode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InvoiceTypeCode"
+              }
+            ]
+          },
+          "currency": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
+            ]
+          },
+          "taxCurrency": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CurrencyCode"
+              }
+            ]
+          },
+          "specificationId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "businessProcessType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "buyerReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "purchaseOrderReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": "array"
+          },
+          "vatPointDateCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "supportingDocuments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdditionalSupportingDocument"
+            }
+          },
+          "precedingInvoiceReferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrecedingInvoiceReference"
+            }
+          },
+          "seller": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SellerParty"
+              }
+            ]
+          },
+          "buyer": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuyerParty"
+              }
+            ]
+          },
+          "delivery": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DeliveryInformation"
+              }
+            ]
+          },
+          "invoicingPeriod": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InvoicingPeriod"
+              }
+            ]
+          },
+          "paymentDetails": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PaymentDetails"
+              }
+            ]
+          },
+          "totals": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DocumentTotals"
+              }
+            ]
+          },
+          "vatBreakdowns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VatBreakdown"
+            }
+          },
+          "lines": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvoiceLine"
+            }
+          },
+          "allowances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentLevelAllowance"
+            }
+          },
+          "charges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentLevelCharge"
+            }
+          }
+        }
+      },
+      "InvoiceLine": {
+        "required": [
+          "quantity",
+          "priceDetails",
+          "vatInformation",
+          "item"
+        ],
+        "type": "object",
+        "properties": {
+          "lineId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lineNote": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "objectIdentifier": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LineObjectIdentifier"
+              }
+            ]
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unitCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lineNetAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "buyerOrderLineReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lineBuyerAccountingReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "linePeriod": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InvoiceLinePeriod"
+              }
+            ]
+          },
+          "priceDetails": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PriceDetails"
+              }
+            ]
+          },
+          "vatInformation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LineVatInformation"
+              }
+            ]
+          },
+          "item": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ItemInformation"
+              }
+            ]
+          },
+          "allowances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineAllowance"
+            }
+          },
+          "charges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineCharge"
+            }
+          }
+        }
+      },
+      "InvoiceLinePeriod": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "InvoiceOptions": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "pattern": "^(?i:en16931|peppol-bis-3|nlcius|ehf|xrechnung|pint)$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syntax": {
+            "pattern": "^(?i:ubl|cii)$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rules": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "language": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PdfLanguage"
+              }
+            ]
+          },
+          "brandColor": {
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pdfUrl": {
+            "maxLength": 2048,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "logoUrl": {
+            "maxLength": 2048,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "includeAdvancedProperties": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "InvoiceTypeCode": {
+        "type": "integer"
+      },
+      "InvoicingPeriod": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "ItemAttribute": {
+        "required": [
+          "name",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "ItemClassification": {
+        "required": [
+          "identifier",
+          "schemeId",
+          "schemeVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schemeVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ItemInformation": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sellerIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "buyerIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "standardIdentifier": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ItemStandardIdentifier"
+              }
+            ]
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemClassification"
+            }
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemAttribute"
+            }
+          },
+          "countryOfOrigin": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CountryCode"
+              }
+            ]
+          }
+        }
+      },
+      "ItemStandardIdentifier": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LineAllowance": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "baseAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LineCharge": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "baseAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LineObjectIdentifier": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LineVatInformation": {
+        "type": "object",
+        "properties": {
+          "categoryCode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VatCategoryCode"
+              }
+            ]
+          },
+          "rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "PaymentDetails": {
+        "type": "object",
+        "properties": {
+          "paymentMeansCode": {},
+          "paymentMeansText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remittanceInformation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentAccountIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentAccountName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bic": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mandateReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentTerms": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PdfLanguage": {
+        "type": "integer"
+      },
+      "PrecedingInvoiceReference": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "PriceDetails": {
+        "required": [
+          "netPrice"
+        ],
+        "type": "object",
+        "properties": {
+          "netPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "discountAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "grossPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "priceBaseQuantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "priceBaseUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SellerContact": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SellerElectronicAddress": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SellerIdentifier": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SellerLegalRegistration": {
+        "required": [
+          "identifier",
+          "schemeId"
+        ],
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "schemeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SellerParty": {
+        "required": [
+          "name",
+          "postalAddress"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tradingName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SellerPostalAddress"
+              }
+            ]
+          },
+          "contact": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SellerContact"
+              }
+            ]
+          },
+          "identifiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SellerIdentifier"
+            }
+          },
+          "legalRegistration": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SellerLegalRegistration"
+              }
+            ]
+          },
+          "vatIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxRegistrationIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "additionalLegalInformation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "electronicAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SellerElectronicAddress"
+              }
+            ]
+          }
+        }
+      },
+      "SellerPostalAddress": {
+        "required": [
+          "country"
+        ],
+        "type": "object",
+        "properties": {
+          "line1": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "line2": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "line3": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "countrySubdivision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "country": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CountryCode"
+              }
+            ]
+          }
+        }
+      },
+      "VatBreakdown": {
+        "type": "object",
+        "properties": {
+          "taxableAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "taxAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "categoryCode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VatCategoryCode"
+              }
+            ]
+          },
+          "rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "exemptionReasonText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "exemptionReasonCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "VatCategoryCode": {
+        "type": "integer"
+      }
+    }
+  }
+}
