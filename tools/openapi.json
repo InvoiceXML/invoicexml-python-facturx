@@ -735,6 +735,12 @@
               "string"
             ]
           },
+          "despatchAdviceReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "notes": {
             "type": "array"
           },

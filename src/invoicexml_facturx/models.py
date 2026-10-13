@@ -931,6 +931,8 @@ class InvoiceDocument(Model):
     """Buyer reference. Carries the Leitweg-ID in XRechnung."""
     purchase_order_reference: str | None = None
     """Purchase order reference."""
+    despatch_advice_reference: str | None = None
+    """Despatch advice reference. The delivery note number."""
     notes: list[InvoiceNote | str] | None = None
     """Invoice note. Each entry carries the note text and an optional UNTDID 4451 subject code."""
     vat_point_date_code: str | None = None
@@ -962,6 +964,7 @@ class InvoiceDocument(Model):
         FieldSpec("business_process_type", "businessProcessType", "str"),
         FieldSpec("buyer_reference", "buyerReference", "str"),
         FieldSpec("purchase_order_reference", "purchaseOrderReference", "str"),
+        FieldSpec("despatch_advice_reference", "despatchAdviceReference", "str"),
         FieldSpec("notes", "notes", ("list", ("note",))),
         FieldSpec("vat_point_date_code", "vatPointDateCode", "str"),
         FieldSpec("supporting_documents", "supportingDocuments", ("list", ("model", "AdditionalSupportingDocument"))),

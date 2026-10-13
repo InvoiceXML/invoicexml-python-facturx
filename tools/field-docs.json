@@ -84,6 +84,7 @@
     "businessProcessType": "Business process type.",
     "buyerReference": "Buyer reference. Carries the Leitweg-ID in XRechnung.",
     "purchaseOrderReference": "Purchase order reference.",
+    "despatchAdviceReference": "Despatch advice reference. The delivery note number.",
     "notes": "Invoice note. Each entry carries the note text and an optional UNTDID 4451 subject code.",
     "vatPointDateCode": "Value added tax point date code. UNTDID 2005 code stating when VAT becomes due: 3 issue date, 35 delivery date, 432 paid to date."
   },

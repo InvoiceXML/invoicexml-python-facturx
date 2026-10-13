@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "invoicexml-facturx"
-version = "0.1.1"
+version = "0.2.0"
 description = "Python client for Factur-X e-invoices: create Factur-X PDF/A-3 from EN 16931 data, validate (including the French BR-FR rules), embed and extract, via the InvoiceXML API."
 readme = "README.md"
 requires-python = ">=3.10"

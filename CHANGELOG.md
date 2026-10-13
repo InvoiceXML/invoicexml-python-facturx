@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Add `despatch_advice_reference` (BT-16, the delivery note number) to `InvoiceDocument`.
+
 ## 0.1.1
 
 - Link the website at https://www.invoicexml.com in the package metadata, the README and error messages.
