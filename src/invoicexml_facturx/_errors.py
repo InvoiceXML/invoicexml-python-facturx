@@ -16,6 +16,8 @@ class ErrorCode(enum.IntEnum):
     Branch on these instead of parsing titles or messages.
     """
 
+    UNKNOWN = 4000
+    """An unexpected error."""
     XML_VALIDATION = 4001
     """The XML is not well-formed or failed schema or business rule validation."""
     MODEL_VALIDATION = 4002
@@ -30,12 +32,22 @@ class ErrorCode(enum.IntEnum):
     """The uploaded PDF carries no embedded invoice XML."""
     PDF_ERROR = 4007
     """The PDF could not be processed."""
+    NOT_AN_INVOICE = 4008
+    """The document is not an invoice."""
+    MULTIPLE_INVOICES = 4009
+    """The document contains more than one invoice."""
     UNAUTHORIZED = 4010
     """The API key is missing, unknown or inactive."""
     REMOTE_FETCH_ERROR = 4011
     """A URL given in the options (such as ``pdf_url`` or ``logo_url``) could not be fetched."""
     NO_ATTACHMENTS = 4013
     """The invoice carries no embedded attachments to extract."""
+    INVALID_ATTACHMENT = 4014
+    """An embedded attachment could not be decoded."""
+    UNEMBEDDABLE_FONT = 4015
+    """The supplied PDF uses a font that cannot be embedded, so it cannot become PDF/A-3."""
+    REMOTE_FETCH_FORBIDDEN = 4016
+    """The host of a PDF or logo URL refused access (HTTP 403)."""
     UNSUPPORTED_PROFILE = 4017
     """The XML declares a specification identifier that is not an official Factur-X profile. See ``FacturXProfile``."""
     TOO_MANY_REQUESTS = 4019
@@ -125,10 +137,10 @@ class PayloadTooLargeError(InvoiceXmlApiError):
 
 
 class RateLimitError(InvoiceXmlApiError):
-    """HTTP 429 after the automatic retries are used up.
+    """HTTP 429 after the automatic retries are used up, or the first 429 of a transform call.
 
     Too many requests for this API key are being processed at the same time.
-    Rate-limited requests consume no credits.
+    A 429 is not billed.
     """
 
     def __init__(self, status_code: int, *, retry_after: float | None = None, **kwargs) -> None:

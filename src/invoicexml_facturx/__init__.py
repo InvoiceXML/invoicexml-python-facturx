@@ -2,7 +2,8 @@
 
 Create Factur-X PDF/A-3 hybrids from the EN 16931 model, validate incoming
 files (optionally against the French BR-FR rules), embed CII XML into existing
-PDFs, and extract invoices back into the model.
+PDFs, render CII XML as PDF, convert between formats, and extract invoices back
+into the model.
 
 >>> from invoicexml_facturx import FacturXClient
 >>> client = FacturXClient()          # reads INVOICEXML_API_KEY
@@ -25,7 +26,14 @@ from .emails import EmailMessage, EmailSendResult
 from .models import *  # noqa: F401,F403
 from .models import __all__ as _model_names
 from .profiles import FacturXProfile
-from .validation import ReportFinding, ReportRow, ValidationData, ValidationFinding, ValidationResult
+from .validation import (
+    ReportFinding,
+    ReportRow,
+    ValidationData,
+    ValidationFinding,
+    ValidationReport,
+    ValidationResult,
+)
 
 __all__ = [
     "DEFAULT_BASE_URL",
@@ -45,6 +53,7 @@ __all__ = [
     "ReportRow",
     "ValidationData",
     "ValidationFinding",
+    "ValidationReport",
     "ValidationResult",
     "FacturXClient",
     "FacturXProfile",

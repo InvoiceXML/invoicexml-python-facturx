@@ -143,3 +143,17 @@ class ValidationResult:
                    errors=[ValidationFinding.from_dict(f) for f in data.get("errors") or []],
                    warnings=[ValidationFinding.from_dict(f) for f in data.get("warnings") or []],
                    report=[ReportRow.from_dict(r) for r in data.get("report") or []])
+
+
+@dataclass
+class ValidationReport:
+    """Result of a validation report call: a printable PDF and the verdict.
+
+    Valid and invalid invoices both come back as a report, so check :attr:`valid`.
+    Only transport problems (missing file, unreadable XML, authentication) raise.
+    """
+
+    file: bytes = field(repr=False)
+    """The report PDF."""
+    valid: bool | None = None
+    """Whether the invoice is compliant. ``None`` when the response carried no verdict."""

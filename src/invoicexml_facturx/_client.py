@@ -24,9 +24,9 @@ from ._errors import (
 from ._files import FileInput, FileUpload, to_upload
 from ._version import __version__
 from .emails import EmailMessage, EmailSendResult
-from .models import CreateInvoiceRequest, InvoiceDocument, InvoiceOptions, RuleSet
+from .models import CreateInvoiceRequest, InvoiceDocument, InvoiceOptions, PdfLanguage, RuleSet
 from .transport import Transport, TransportRequest, TransportResponse, UrllibTransport
-from .validation import ValidationFinding, ValidationResult
+from .validation import ValidationFinding, ValidationReport, ValidationResult
 
 DEFAULT_BASE_URL = "https://api.invoicexml.com"
 API_KEY_ENV = "INVOICEXML_API_KEY"
@@ -35,6 +35,7 @@ InvoiceInput = InvoiceDocument | Mapping[str, Any]
 OptionsInput = InvoiceOptions | Mapping[str, Any] | None
 EmailInput = EmailMessage | Mapping[str, Any]
 RulesInput = Iterable[RuleSet | str] | None
+LanguageInput = PdfLanguage | str | None
 
 
 class FacturXClient:
@@ -50,8 +51,8 @@ class FacturXClient:
     listing the violated rules. For invoices under the French mandate, add
     ``RuleSet.BR_FR`` to apply the BR-FR rules too.
 
-    HTTP 429 responses are retried automatically after the ``Retry-After`` delay.
-    Other errors raise an :class:`InvoiceXmlApiError` subclass, and network
+    HTTP 429 responses are retried automatically after the ``Retry-After`` delay,
+    except on transform calls. Other errors raise an :class:`InvoiceXmlApiError` subclass, and network
     failures raise :class:`InvoiceXmlConnectionError`.
 
     Instances hold no connection state and are safe to share between threads.
@@ -64,7 +65,8 @@ class FacturXClient:
         :param api_key: Your InvoiceXML API key. Defaults to the ``INVOICEXML_API_KEY`` environment variable.
         :param base_url: The API base URL, without the ``/v1`` path.
         :param timeout: Overall timeout of one request, in seconds.
-        :param max_retries: How often a request answered with HTTP 429 is retried. 0 disables retries.
+        :param max_retries: How often a request answered with HTTP 429 is retried, on every call except transform.
+            0 disables retries.
         :param max_retry_wait: The longest ``Retry-After`` delay, in seconds, the client waits out by itself.
         :param transport: A custom HTTP layer, see :mod:`invoicexml_facturx.transport`.
         """
@@ -128,6 +130,25 @@ class FacturXClient:
         parts: list[tuple[str, Any]] = [("file", to_upload(pdf))] + _rule_parts(rules)
         response = self._post_form("/v1/validate/facturx", parts, accept_json=True)
         return ValidationResult.from_dict(self._read_json(response, "/v1/validate/facturx"))
+
+    def validate_facturx_report(self, pdf: FileInput, *, rules: RulesInput = None,
+                                validation_language: LanguageInput = None) -> ValidationReport:
+        """Validate a Factur-X PDF and return the verdict as a printable PDF report.
+
+        Runs the same checks as :meth:`validate_facturx`. A failed verdict is a normal
+        result, also for a PDF without embedded XML. Only transport problems (missing
+        file, unreadable XML, authentication) raise.
+
+        :param pdf: A path, the PDF bytes, or a :class:`FileUpload`.
+        :param rules: Extra rule sets, for example ``[RuleSet.BR_FR]`` for the French mandate.
+        :param validation_language: Language of the whole report: en, de or fr. English when omitted.
+        :returns: The report PDF and the verdict. Check ``report.valid``.
+        :raises InvoiceXmlApiError: An extra rule set needs a higher profile than the invoice declares.
+        """
+        parts: list[tuple[str, Any]] = [("file", to_upload(pdf))] + _rule_parts(rules)
+        parts += _language_part("validationLanguage", validation_language)
+        response = self._post_form("/v1/validate/facturx/report", parts)
+        return ValidationReport(file=response.body, valid=_verdict(response.header("X-Invoice-Valid")))
 
     # ------------------------------------------------------------------- embed
 
@@ -198,6 +219,123 @@ class FacturXClient:
         response = self._post_form("/v1/embed/facturx/email", parts, accept_json=True)
         return EmailSendResult.from_dict(self._read_json(response, "/v1/embed/facturx/email"))
 
+    # ------------------------------------------------------------------ render
+
+    def render_cii_to_pdf(self, xml: FileInput, *, language: LanguageInput = None, logo_url: str | None = None,
+                          include_qr_code: bool | None = None) -> bytes:
+        """Render a CII invoice XML, such as the XML of a Factur-X invoice, as a human-readable PDF.
+
+        :param xml: A path, the XML bytes, or a :class:`FileUpload`.
+        :param language: Language of the PDF. English when omitted.
+        :param logo_url: Public URL of the seller's logo (PNG or JPEG, at most 2 MB).
+        :param include_qr_code: Print the EPC payment QR code (GiroCode). Not printed when omitted.
+        :returns: The PDF bytes.
+        """
+        parts: list[tuple[str, Any]] = [("file", to_upload(xml))]
+        parts += _language_part("language", language)
+        if logo_url is not None:
+            parts.append(("logoUrl", logo_url))
+        parts += _flag_part("includeQrCode", include_qr_code)
+        return self._post_form("/v1/render/cii/to/pdf", parts).body
+
+    # ----------------------------------------------------------------- convert
+
+    def convert_facturx_to_ubl(self, pdf: FileInput, *, validation_language: LanguageInput = None) -> str:
+        """Convert the XML embedded in a Factur-X PDF to UBL 2.1.
+
+        :param pdf: A path, the PDF bytes, or a :class:`FileUpload`.
+        :param validation_language: Language of the findings of a failed conversion: en, de or fr. English when omitted.
+        :returns: The XML document.
+        :raises InvoiceValidationError: The invoice violates the rule set.
+        :raises InvoiceXmlApiError: With ``ErrorCode.NO_EMBEDDED_XML`` when the PDF carries no invoice XML.
+        """
+        return self._convert_to_xml("/v1/convert/facturx/to/ubl", pdf, validation_language)
+
+    def convert_facturx_to_cii(self, pdf: FileInput, *, validation_language: LanguageInput = None) -> str:
+        """Convert the XML embedded in a Factur-X PDF to a standalone CII XML.
+
+        :param pdf: A path, the PDF bytes, or a :class:`FileUpload`.
+        :param validation_language: Language of the findings of a failed conversion: en, de or fr. English when omitted.
+        :returns: The XML document.
+        :raises InvoiceValidationError: The invoice violates the rule set.
+        :raises InvoiceXmlApiError: With ``ErrorCode.NO_EMBEDDED_XML`` when the PDF carries no invoice XML.
+        """
+        return self._convert_to_xml("/v1/convert/facturx/to/cii", pdf, validation_language)
+
+    def convert_cii_to_facturx(self, xml: FileInput, *, language: LanguageInput = None,
+                               validation_language: LanguageInput = None) -> bytes:
+        """Convert a CII invoice XML to a Factur-X PDF/A-3 with a rendered PDF.
+
+        :param xml: A path, the XML bytes, or a :class:`FileUpload`.
+        :param language: Language of the PDF and of the default texts added to the XML
+            when the file has none: en, de or fr. English when omitted.
+        :param validation_language: Language of the findings of a failed conversion: en, de or fr. English when omitted.
+        :returns: The hybrid PDF bytes.
+        :raises InvoiceValidationError: The invoice violates the rule set.
+        """
+        return self._convert_to_hybrid("/v1/convert/cii/to/facturx", xml, language, validation_language)
+
+    def convert_ubl_to_facturx(self, xml: FileInput, *, language: LanguageInput = None,
+                               validation_language: LanguageInput = None) -> bytes:
+        """Convert a UBL 2.1 invoice to a Factur-X PDF/A-3 with a rendered PDF.
+
+        :param xml: A path, the XML bytes, or a :class:`FileUpload`.
+        :param language: Language of the PDF and of the default texts added to the XML
+            when the file has none: en, de or fr. English when omitted.
+        :param validation_language: Language of the findings of a failed conversion: en, de or fr. English when omitted.
+        :returns: The hybrid PDF bytes.
+        :raises InvoiceValidationError: The invoice violates the rule set.
+        """
+        return self._convert_to_hybrid("/v1/convert/ubl/to/facturx", xml, language, validation_language)
+
+    def convert_xrechnung_to_facturx(self, xml: FileInput, *, language: LanguageInput = None,
+                                     validation_language: LanguageInput = None) -> bytes:
+        """Convert an XRechnung XML (UBL or CII) to a Factur-X PDF/A-3 with a rendered PDF.
+
+        :param xml: A path, the XML bytes, or a :class:`FileUpload`.
+        :param language: Language of the PDF and of the default texts added to the XML
+            when the file has none: en, de or fr. English when omitted.
+        :param validation_language: Language of the findings of a failed conversion: en, de or fr. English when omitted.
+        :returns: The hybrid PDF bytes.
+        :raises InvoiceValidationError: The invoice violates the rule set.
+        """
+        return self._convert_to_hybrid("/v1/convert/xrechnung/to/facturx", xml, language, validation_language)
+
+    # --------------------------------------------------------------- transform
+
+    def transform_to_facturx(self, pdf: FileInput, *, language: LanguageInput = None,
+                             preserve_original_pdf: bool | None = None, include_advanced_properties: bool | None = None,
+                             validation_language: LanguageInput = None) -> bytes:
+        """Read a PDF invoice with AI and return a Factur-X PDF/A-3.
+
+        AI reads the data from the PDF, so a person must check the result before it
+        is used. By default the PDF is rendered from the data the AI read and ends
+        with an "Electronic invoice details" section, so that data can be checked on
+        the pages.
+
+        A 429 on this method is not retried automatically, so wait for ``Retry-After``
+        before calling again if you want to retry.
+
+        :param pdf: A path, the PDF bytes, or a :class:`FileUpload`.
+        :param language: Language of the rendered PDF and of the default texts in the XML:
+            en, de, fr or ``"auto"``. When omitted the API uses ``auto``: the language the
+            invoice is written in, English when that is none of the three.
+        :param preserve_original_pdf: ``True`` keeps the uploaded PDF as the visual layer and
+            only embeds the XML. Its earlier attachments and form fields are not kept.
+        :param include_advanced_properties: ``False`` leaves out the "Electronic invoice
+            details" section. The section is on when omitted, and ``preserve_original_pdf``
+            ignores this setting.
+        :param validation_language: Language of the findings of a failed transform: en, de or fr. English when omitted.
+        :returns: The hybrid PDF bytes.
+        :raises InvoiceValidationError: The invoice the AI read violates the rule set.
+        """
+        parts: list[tuple[str, Any]] = [("file", to_upload(pdf))]
+        parts += _language_part("language", language)
+        parts += _flag_part("preserveOriginalPdf", preserve_original_pdf)
+        parts += _flag_part("includeAdvancedProperties", include_advanced_properties)
+        parts += _language_part("validationLanguage", validation_language)
+        return self._post_form("/v1/transform/to/facturx", parts, retry_rate_limit=False).body
+
     # ----------------------------------------------------------------- extract
 
     def extract_json(self, file: FileInput) -> InvoiceDocument:
@@ -222,9 +360,21 @@ class FacturXClient:
 
     # ---------------------------------------------------------------- plumbing
 
-    def _post_form(self, path: str, parts: list[tuple[str, Any]], accept_json: bool = False) -> TransportResponse:
+    def _post_form(self, path: str, parts: list[tuple[str, Any]], accept_json: bool = False,
+                   *, retry_rate_limit: bool = True) -> TransportResponse:
         content_type, body = _multipart(parts)
-        return self._execute(path, content_type, body, accept_json=accept_json)
+        return self._execute(path, content_type, body, accept_json=accept_json, retry_rate_limit=retry_rate_limit)
+
+    def _convert_to_xml(self, path: str, pdf: FileInput, validation_language: LanguageInput) -> str:
+        parts: list[tuple[str, Any]] = [("file", to_upload(pdf))]
+        parts += _language_part("validationLanguage", validation_language)
+        return self._post_form(path, parts).body.decode("utf-8")
+
+    def _convert_to_hybrid(self, path: str, xml: FileInput, language: LanguageInput,
+                           validation_language: LanguageInput) -> bytes:
+        parts: list[tuple[str, Any]] = [("file", to_upload(xml))]
+        parts += _language_part("language", language) + _language_part("validationLanguage", validation_language)
+        return self._post_form(path, parts).body
 
     @staticmethod
     def _read_json(response: TransportResponse, path: str) -> Mapping[str, Any]:
@@ -236,7 +386,8 @@ class FacturXClient:
             raise InvoiceXmlError(f"Unexpected response of {path}")
         return data
 
-    def _execute(self, path: str, content_type: str, body: bytes, *, accept_json: bool) -> TransportResponse:
+    def _execute(self, path: str, content_type: str, body: bytes, *, accept_json: bool,
+                 retry_rate_limit: bool = True) -> TransportResponse:
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": content_type,
@@ -254,7 +405,7 @@ class FacturXClient:
                 raise InvoiceXmlConnectionError(f"Request to {path} failed: {error}") from error
             if 200 <= response.status_code < 300:
                 return response
-            if response.status_code == 429 and attempt < self._max_retries:
+            if response.status_code == 429 and retry_rate_limit and attempt < self._max_retries:
                 wait = _retry_after(response.header("Retry-After"), self._now())
                 if wait is None:
                     wait = float(2 ** min(attempt, 5))
@@ -271,6 +422,22 @@ def _rule_parts(rules: RulesInput) -> list[tuple[str, Any]]:
     if isinstance(rules, (str, RuleSet)):
         rules = [rules]
     return [("rules", rule.value if isinstance(rule, RuleSet) else str(rule)) for rule in rules]
+
+
+def _language_part(name: str, language: LanguageInput) -> list[tuple[str, Any]]:
+    if language is None:
+        return []
+    value = language.value if isinstance(language, PdfLanguage) else str(language)
+    return [(name, value.lower())]
+
+
+def _flag_part(name: str, value: bool | None) -> list[tuple[str, Any]]:
+    return [] if value is None else [(name, "true" if value else "false")]
+
+
+def _verdict(header: str | None) -> bool | None:
+    value = (header or "").strip().lower()
+    return True if value == "true" else False if value == "false" else None
 
 
 def _email_fields(email: EmailInput) -> dict[str, Any]:

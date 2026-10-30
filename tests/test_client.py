@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from decimal import Decimal
 
@@ -23,16 +24,26 @@ from invoicexml_facturx import (
     PdfLanguage,
     RateLimitError,
     RuleSet,
+    ValidationReport,
 )
 from invoicexml_facturx.validation import LAYER_EN16931
 
 PDF = b"%PDF-1.7 stub"
 XML = '<?xml version="1.0"?><rsm:CrossIndustryInvoice/>'
 SENT = {"status": "accepted", "messageId": "0102abc"}
+CONVERT_TO_XML = [("convert_facturx_to_ubl", "/v1/convert/facturx/to/ubl"),
+                  ("convert_facturx_to_cii", "/v1/convert/facturx/to/cii")]
+CONVERT_TO_HYBRID = [("convert_cii_to_facturx", "/v1/convert/cii/to/facturx"),
+                     ("convert_ubl_to_facturx", "/v1/convert/ubl/to/facturx"),
+                     ("convert_xrechnung_to_facturx", "/v1/convert/xrechnung/to/facturx")]
 
 
 def text(request) -> str:
     return request.body.decode("utf-8")
+
+
+def part_names(request) -> list[str]:
+    return re.findall(r'form-data; name="([^"]+)"', text(request))
 
 
 # ------------------------------------------------------------------- create
@@ -141,6 +152,51 @@ def test_invalid_invoice_is_a_result_not_an_exception(client, stub):
     assert result.errors[0].fields == ["totals.sumOfLineNetAmounts"]
     assert result.warnings[0].line == 2
     assert not result.report[0].is_valid
+
+
+@pytest.mark.parametrize("header, valid", [("true", True), ("false", False), ("False", False), ("maybe", None)])
+def test_validation_report_returns_the_pdf_and_the_verdict(client, stub, header, valid):
+    stub.respond(200, PDF, "application/pdf", X_Invoice_Valid=header)
+
+    report = client.validate_facturx_report(PDF)
+
+    assert report == ValidationReport(file=PDF, valid=valid)
+    assert stub.last.url == "https://api.invoicexml.com/v1/validate/facturx/report"
+    assert stub.last.header("Accept") is None
+    assert part_names(stub.last) == ["file"]
+
+
+def test_validation_report_without_the_header_has_no_verdict(client, stub):
+    stub.respond(200, PDF, "application/pdf")
+
+    report = client.validate_facturx_report(PDF)
+
+    assert report.file == PDF
+    assert report.valid is None
+
+
+def test_validation_report_sends_one_part_per_rule_and_the_validation_language(client, stub):
+    stub.respond(200, PDF, "application/pdf", X_Invoice_Valid="false")
+
+    client.validate_facturx_report(PDF, rules=[RuleSet.BR_FR, "peppol"], validation_language=PdfLanguage.FR)
+
+    body = text(stub.last)
+    assert body.count('name="rules"') == 2
+    assert 'name="rules"\r\n\r\nbr-fr\r\n' in body
+    assert 'name="rules"\r\n\r\npeppol\r\n' in body
+    assert 'name="validationLanguage"\r\n\r\nfr\r\n' in body
+
+
+def test_validation_report_transport_problem_raises(client, stub):
+    stub.respond_json(400, {"title": "Missing file", "errorCode": 4003})
+
+    with pytest.raises(InvoiceXmlApiError) as info:
+        client.validate_facturx_report(FileUpload.pdf(b""))
+    assert info.value.error_code == ErrorCode.MISSING_FILE
+
+
+def test_validation_report_repr_leaves_out_the_pdf():
+    assert "stub" not in repr(ValidationReport(file=PDF, valid=True))
 
 
 # -------------------------------------------------------------------- embed
@@ -385,6 +441,154 @@ def test_a_single_copy_address_in_a_dict_is_a_list_on_both_route_types(client, s
     assert 'name="email.cc"\r\n\r\na@atelier.fr\r\n' in text(stub.requests[1])
 
 
+# ------------------------------------------------------------------- render
+
+def test_render_cii_sends_only_what_is_set(client, stub):
+    stub.respond(200, PDF, "application/pdf").respond(200, PDF, "application/pdf").respond(200, PDF, "application/pdf")
+
+    assert client.render_cii_to_pdf(XML.encode()) == PDF
+    client.render_cii_to_pdf(XML.encode(), language=PdfLanguage.FR, logo_url="https://example.com/logo.png",
+                             include_qr_code=True)
+    client.render_cii_to_pdf(XML.encode(), include_qr_code=False)
+
+    assert stub.requests[0].url == "https://api.invoicexml.com/v1/render/cii/to/pdf"
+    assert part_names(stub.requests[0]) == ["file"]
+    assert part_names(stub.requests[1]) == ["file", "language", "logoUrl", "includeQrCode"]
+    assert 'name="language"\r\n\r\nfr\r\n' in text(stub.requests[1])
+    assert 'name="logoUrl"\r\n\r\nhttps://example.com/logo.png\r\n' in text(stub.requests[1])
+    assert 'name="includeQrCode"\r\n\r\ntrue\r\n' in text(stub.requests[1])
+    assert 'name="includeQrCode"\r\n\r\nfalse\r\n' in text(stub.requests[2])
+
+
+# ------------------------------------------------------------------ convert
+
+@pytest.mark.parametrize("method, route", CONVERT_TO_XML)
+def test_convert_to_xml_returns_text_and_sends_only_the_file(client, stub, method, route):
+    stub.respond(200, XML, "application/xml")
+
+    assert getattr(client, method)(PDF) == XML
+
+    assert stub.last.url == f"https://api.invoicexml.com{route}"
+    assert part_names(stub.last) == ["file"]
+
+
+@pytest.mark.parametrize("method, route", CONVERT_TO_XML)
+def test_convert_to_xml_sends_the_validation_language(client, stub, method, route):
+    stub.respond(200, XML, "application/xml")
+
+    getattr(client, method)(PDF, validation_language="FR")
+
+    assert part_names(stub.last) == ["file", "validationLanguage"]
+    assert 'name="validationLanguage"\r\n\r\nfr\r\n' in text(stub.last)
+
+
+@pytest.mark.parametrize("method", [name for name, _ in CONVERT_TO_XML])
+def test_convert_to_xml_takes_no_language(client, method):
+    with pytest.raises(TypeError):
+        getattr(client, method)(PDF, language="fr")
+
+
+@pytest.mark.parametrize("method, route", CONVERT_TO_HYBRID)
+def test_convert_to_hybrid_returns_the_pdf_and_sends_only_the_file(client, stub, method, route):
+    stub.respond(200, PDF, "application/pdf")
+
+    assert getattr(client, method)(XML.encode()) == PDF
+
+    assert stub.last.url == f"https://api.invoicexml.com{route}"
+    assert part_names(stub.last) == ["file"]
+
+
+@pytest.mark.parametrize("method, route", CONVERT_TO_HYBRID)
+def test_convert_to_hybrid_sends_both_languages(client, stub, method, route):
+    stub.respond(200, PDF, "application/pdf")
+
+    getattr(client, method)(XML.encode(), language=PdfLanguage.FR, validation_language="de")
+
+    body = text(stub.last)
+    assert 'name="language"\r\n\r\nfr\r\n' in body
+    assert 'name="validationLanguage"\r\n\r\nde\r\n' in body
+
+
+def test_convert_rejection_carries_findings(client, stub):
+    stub.respond_json(400, fixture("create-400.json"))
+
+    with pytest.raises(InvoiceValidationError) as info:
+        client.convert_cii_to_facturx(XML.encode())
+    assert info.value.errors[0].rule == "BR-CO-26"
+
+
+def test_convert_of_a_pdf_without_xml_surfaces_its_error_code(client, stub):
+    stub.respond_json(400, {"title": "No embedded XML found", "errorCode": 4006,
+                            "errors": [{"message": "The PDF carries no invoice XML."}]})
+
+    with pytest.raises(InvoiceXmlApiError) as info:
+        client.convert_facturx_to_ubl(PDF)
+    assert info.value.error_code == ErrorCode.NO_EMBEDDED_XML
+
+
+# ---------------------------------------------------------------- transform
+
+def test_transform_to_facturx_sends_only_the_file(client, stub):
+    stub.respond(200, PDF, "application/pdf")
+
+    assert client.transform_to_facturx(PDF) == PDF
+
+    assert stub.last.url == "https://api.invoicexml.com/v1/transform/to/facturx"
+    assert part_names(stub.last) == ["file"]
+
+
+def test_transform_to_facturx_sends_every_option(client, stub):
+    stub.respond(200, PDF, "application/pdf")
+
+    client.transform_to_facturx(PDF, language=PdfLanguage.FR, preserve_original_pdf=True,
+                                include_advanced_properties=True, validation_language="de")
+
+    body = text(stub.last)
+    assert 'name="language"\r\n\r\nfr\r\n' in body
+    assert 'name="preserveOriginalPdf"\r\n\r\ntrue\r\n' in body
+    assert 'name="includeAdvancedProperties"\r\n\r\ntrue\r\n' in body
+    assert 'name="validationLanguage"\r\n\r\nde\r\n' in body
+
+
+def test_transform_to_facturx_really_sends_false(client, stub):
+    stub.respond(200, PDF, "application/pdf")
+
+    client.transform_to_facturx(PDF, preserve_original_pdf=False, include_advanced_properties=False)
+
+    body = text(stub.last)
+    assert 'name="preserveOriginalPdf"\r\n\r\nfalse\r\n' in body
+    assert 'name="includeAdvancedProperties"\r\n\r\nfalse\r\n' in body
+
+
+def test_transform_to_facturx_takes_auto(client, stub):
+    stub.respond(200, PDF, "application/pdf")
+
+    client.transform_to_facturx(PDF, language="auto")
+
+    assert 'name="language"\r\n\r\nauto\r\n' in text(stub.last)
+
+
+def test_transform_rejection_carries_findings(client, stub):
+    stub.respond_json(400, fixture("create-400.json"))
+
+    with pytest.raises(InvoiceValidationError) as info:
+        client.transform_to_facturx(PDF)
+    assert info.value.errors[0].rule == "BR-CO-26"
+
+
+def test_transform_rate_limit_makes_one_request_and_raises(client, stub, sleeps):
+    stub.respond_json(429, {"title": "Too many requests", "errorCode": 4019}, Retry_After="2")
+
+    with pytest.raises(RateLimitError) as info:
+        client.transform_to_facturx(PDF)
+
+    assert len(stub.requests) == 1
+    assert stub.last.url == "https://api.invoicexml.com/v1/transform/to/facturx"
+    assert sleeps == []
+    assert info.value.retry_after == 2.0
+    assert info.value.error_code == ErrorCode.TOO_MANY_REQUESTS
+
+
 # ------------------------------------------------------------------ extract
 
 def test_extract_json_returns_the_invoice_model(client, stub):
@@ -428,6 +632,26 @@ def test_retry_after_http_date_is_honoured(client, stub, sleeps):
     client.create_facturx(sample_invoice())
 
     assert sleeps == [5.0]
+
+
+def test_render_convert_and_report_retry_after_a_rate_limit(client, stub, sleeps):
+    stub.respond_json(429, {}, Retry_After="1").respond(200, PDF, "application/pdf")
+    stub.respond_json(429, {}, Retry_After="1").respond(200, XML, "application/xml")
+    stub.respond_json(429, {}, Retry_After="1").respond(200, PDF, "application/pdf", X_Invoice_Valid="true")
+
+    client.render_cii_to_pdf(FileUpload.xml(XML))
+    client.convert_facturx_to_ubl(PDF)
+    client.validate_facturx_report(PDF)
+
+    assert [request.url.removeprefix("https://api.invoicexml.com") for request in stub.requests] == [
+        "/v1/render/cii/to/pdf",
+        "/v1/render/cii/to/pdf",
+        "/v1/convert/facturx/to/ubl",
+        "/v1/convert/facturx/to/ubl",
+        "/v1/validate/facturx/report",
+        "/v1/validate/facturx/report",
+    ]
+    assert sleeps == [1.0, 1.0, 1.0]
 
 
 def test_rate_limit_surfaces_after_retries_are_used_up(client, stub, sleeps):

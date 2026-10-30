@@ -1,13 +1,13 @@
 # InvoiceXML Factur-X client for Python
 
-Create, validate, embed and extract **Factur-X** e-invoices from Python with the [InvoiceXML API](https://www.invoicexml.com). Build the invoice from typed EN 16931 dataclasses and get back a compliant Factur-X PDF/A-3, already validated against the official rule set and, on request, the French mandate's BR-FR rules.
+Create, validate, embed, render, convert and extract **Factur-X** e-invoices from Python with the [InvoiceXML API](https://www.invoicexml.com). Build the invoice from typed EN 16931 dataclasses and get back a compliant Factur-X PDF/A-3, already validated against the official rule set and, on request, the French mandate's BR-FR rules.
 
 - Python 3.10 or later, no dependencies outside the standard library
 - Typed EN 16931 dataclasses generated from the API's OpenAPI schema
 - All Factur-X profiles, from MINIMUM to EXTENDED
 - Exact decimal amounts, never floats on the wire
 - Rejected invoices surface the violated rules as typed findings
-- Automatic retry on HTTP 429, honouring `Retry-After`
+- Automatic retry on HTTP 429 on every call except transform, honouring `Retry-After`
 
 ## Installation
 
@@ -48,9 +48,17 @@ Totals and the VAT breakdown are calculated from the lines. The PDF is a Factur-
 |---|---|---|
 | `create_facturx(invoice, options=None)` | `POST /v1/create/facturx` | Factur-X PDF/A-3 (`bytes`) |
 | `validate_facturx(pdf, *, rules=None)` | `POST /v1/validate/facturx` | `ValidationResult` |
+| `validate_facturx_report(pdf, *, rules=None, validation_language=None)` | `POST /v1/validate/facturx/report` | `ValidationReport` |
 | `embed_facturx(pdf, xml, *, skip_validation=False, rules=None)` | `POST /v1/embed/facturx` | Factur-X PDF/A-3 (`bytes`) |
 | `email_facturx(invoice, email, options=None)` | `POST /v1/create/facturx/email` | `EmailSendResult` |
 | `email_embedded_facturx(pdf, xml, email, *, rules=None)` | `POST /v1/embed/facturx/email` | `EmailSendResult` |
+| `render_cii_to_pdf(xml, *, language=None, logo_url=None, include_qr_code=None)` | `POST /v1/render/cii/to/pdf` | Readable PDF (`bytes`) |
+| `convert_facturx_to_ubl(pdf, *, validation_language=None)` | `POST /v1/convert/facturx/to/ubl` | UBL XML (`str`) |
+| `convert_facturx_to_cii(pdf, *, validation_language=None)` | `POST /v1/convert/facturx/to/cii` | CII XML (`str`) |
+| `convert_cii_to_facturx(xml, *, language=None, validation_language=None)` | `POST /v1/convert/cii/to/facturx` | Factur-X PDF/A-3 (`bytes`) |
+| `convert_ubl_to_facturx(xml, *, language=None, validation_language=None)` | `POST /v1/convert/ubl/to/facturx` | Factur-X PDF/A-3 (`bytes`) |
+| `convert_xrechnung_to_facturx(xml, *, language=None, validation_language=None)` | `POST /v1/convert/xrechnung/to/facturx` | Factur-X PDF/A-3 (`bytes`) |
+| `transform_to_facturx(pdf, *, language=None, preserve_original_pdf=None, include_advanced_properties=None, validation_language=None)` | `POST /v1/transform/to/facturx` | Factur-X PDF/A-3 (`bytes`), to be checked by a person |
 | `extract_json(file)` | `POST /v1/extract/json` | `InvoiceDocument` |
 | `extract_attachments(file)` | `POST /v1/extract/attachments` | ZIP of embedded documents (`bytes`) |
 
@@ -98,7 +106,7 @@ The sender must be on a domain added and verified on the Verified email domains 
 
 An unverified sender domain raises `InvoiceXmlApiError` with `ErrorCode.EMAIL_DOMAIN_NOT_VERIFIED`, `EMAIL_NOT_IN_PLAN` means [your plan does not include this](https://www.invoicexml.com/pricing), and `EMAIL_SENDING_DISABLED` means sending is disabled or paused for your account. None of these consume credits. A bad address raises `InvoiceValidationError` with the affected `email.*` field.
 
-Only HTTP 429 is retried, because nothing was sent. Other failures are never retried, since a second attempt could send a second email. After a timeout, a connection failure or a 503 with `ErrorCode.PROCESSING_TIMEOUT` (4023), which can happen while the send is in flight, the outcome is unknown, so check before you send it again.
+Only HTTP 429 is retried, because nothing was sent. Other failures are never retried, since a second attempt could send a second email. After a timeout or a connection failure the outcome is unknown, so check before you send it again.
 
 ## Rejected invoices
 
@@ -127,6 +135,51 @@ if not result.valid:
 
 The result also carries the detected profile, the schema and Schematron verdicts, and a field report with one row per invoice field.
 
+## Validation report
+
+`validate_facturx_report` runs the same checks and returns a printable PDF report with the verdict. It takes the same `rules` as `validate_facturx`, and `validation_language` words the whole report in `en`, `de` or `fr`:
+
+```python
+report = client.validate_facturx_report("facture-fournisseur.pdf", rules=[RuleSet.BR_FR], validation_language="fr")
+Path("rapport.pdf").write_bytes(report.file)
+if report.valid is False:
+    print("Not compliant, see the report")
+```
+
+A failed verdict is a normal result, not an exception. `report.valid` is `True`, `False`, or `None` when the response carried no verdict. A missing or malformed file still raises the usual error. See the [report guide](https://www.invoicexml.com/docs/api/validate/facturx/report).
+
+## Render an invoice as PDF
+
+Turn the CII XML of a Factur-X invoice into a readable PDF, for a preview or for people who cannot read XML:
+
+```python
+pdf = client.render_cii_to_pdf("facture.xml", language=PdfLanguage.FR, include_qr_code=True,
+                               logo_url="https://example.com/logo.png")
+```
+
+`language` picks `en`, `de` or `fr`, and `include_qr_code` prints the payment QR code. See the [render guide](https://www.invoicexml.com/docs/api/render/cii/to/pdf).
+
+## Convert between formats
+
+Each conversion has its own method. `convert_facturx_to_ubl` and `convert_facturx_to_cii` return the XML as `str`, and the routes to Factur-X return the PDF/A-3 as `bytes`:
+
+```python
+ubl = client.convert_facturx_to_ubl("facture.pdf")
+Path("facture-facturx.pdf").write_bytes(client.convert_cii_to_facturx("facture.xml", language=PdfLanguage.FR))
+```
+
+The result is validated like a created document, so a conversion that violates the rules raises `InvoiceValidationError`, with the findings worded in `validation_language` (`en`, `de` or `fr`). `language` is only taken by the routes to Factur-X, where it sets the language of the rendered PDF. See the guides: [Factur-X to UBL](https://www.invoicexml.com/docs/api/convert/facturx/to/ubl), [Factur-X to CII](https://www.invoicexml.com/docs/api/convert/facturx/to/cii), [CII to Factur-X](https://www.invoicexml.com/docs/api/convert/cii/to/facturx), [UBL to Factur-X](https://www.invoicexml.com/docs/api/convert/ubl/to/facturx) and [XRechnung to Factur-X](https://www.invoicexml.com/docs/api/convert/xrechnung/to/facturx).
+
+## Transform a PDF invoice
+
+`transform_to_facturx` has AI read a PDF invoice and builds the Factur-X from what it read, so a person must check the result before it is used:
+
+```python
+pdf = client.transform_to_facturx("facture.pdf")
+```
+
+By default the PDF is rendered from the data the AI read, in the language of the invoice, and ends with an "Electronic invoice details" section, so the data can be checked on the pages. `language` takes `en`, `de`, `fr` or `auto`, the default. Set `include_advanced_properties=False` to leave that section out, or `preserve_original_pdf=True` to keep the uploaded PDF as the visual layer. A 429 on this method is not retried automatically, so wait for `Retry-After` before calling again if you want to retry. See the [transform guide](https://www.invoicexml.com/docs/api/transform/to/facturx).
+
 ## Errors, rate limits and retries
 
 All exceptions extend `InvoiceXmlError`.
@@ -136,11 +189,11 @@ All exceptions extend `InvoiceXmlError`.
 | `InvoiceValidationError` | HTTP 400 with rule findings |
 | `AuthenticationError` | HTTP 401, the API key is missing or inactive |
 | `PayloadTooLargeError` | HTTP 413, a file exceeds 20 MB |
-| `RateLimitError` | HTTP 429 after the automatic retries |
+| `RateLimitError` | HTTP 429 after any automatic retries |
 | `InvoiceXmlApiError` | Any other error response, with `error_code` from `ErrorCode` |
 | `InvoiceXmlConnectionError` | The API could not be reached |
 
-On HTTP 429 the client waits for the `Retry-After` delay and retries, three times by default. Rate-limited requests consume no credits.
+On HTTP 429 every call except transform waits for the `Retry-After` delay and retries, three times by default. A 429 is not billed.
 
 ```python
 client = FacturXClient(api_key, max_retries=5, max_retry_wait=30, timeout=60)
