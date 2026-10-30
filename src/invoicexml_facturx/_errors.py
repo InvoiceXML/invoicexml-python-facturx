@@ -40,6 +40,14 @@ class ErrorCode(enum.IntEnum):
     """The XML declares a specification identifier that is not an official Factur-X profile. See ``FacturXProfile``."""
     TOO_MANY_REQUESTS = 4019
     """Too many concurrent requests for this API key. Retryable after the ``Retry-After`` delay."""
+    EMAIL_NOT_IN_PLAN = 4020
+    """Your plan does not include email delivery. See https://www.invoicexml.com/pricing."""
+    EMAIL_SENDING_DISABLED = 4021
+    """Email sending is disabled or paused for this account."""
+    EMAIL_DOMAIN_NOT_VERIFIED = 4022
+    """The sender's domain is not verified yet. Check it on the Verified email domains page of your dashboard."""
+    PROCESSING_TIMEOUT = 4023
+    """The request exceeded the processing time limit (HTTP 503)."""
 
 
 class InvoiceXmlError(Exception):

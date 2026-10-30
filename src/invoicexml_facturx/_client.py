@@ -23,6 +23,7 @@ from ._errors import (
 )
 from ._files import FileInput, FileUpload, to_upload
 from ._version import __version__
+from .emails import EmailMessage, EmailSendResult
 from .models import CreateInvoiceRequest, InvoiceDocument, InvoiceOptions, RuleSet
 from .transport import Transport, TransportRequest, TransportResponse, UrllibTransport
 from .validation import ValidationFinding, ValidationResult
@@ -32,6 +33,7 @@ API_KEY_ENV = "INVOICEXML_API_KEY"
 
 InvoiceInput = InvoiceDocument | Mapping[str, Any]
 OptionsInput = InvoiceOptions | Mapping[str, Any] | None
+EmailInput = EmailMessage | Mapping[str, Any]
 RulesInput = Iterable[RuleSet | str] | None
 
 
@@ -41,6 +43,7 @@ class FacturXClient:
     >>> client = FacturXClient()                    # reads INVOICEXML_API_KEY
     >>> pdf = client.create_facturx(invoice)        # Factur-X PDF/A-3 bytes
     >>> result = client.validate_facturx("facture.pdf", rules=[RuleSet.BR_FR])
+    >>> sent = client.email_facturx(invoice, EmailMessage(from_=sender, to=buyer))
 
     Every create call validates the invoice against the full rule set before the
     document is returned. A rejected invoice raises :class:`InvoiceValidationError`
@@ -147,6 +150,54 @@ class FacturXClient:
         parts += _rule_parts(rules)
         return self._post_form("/v1/embed/facturx", parts).body
 
+    # ------------------------------------------------------------------- email
+
+    def email_facturx(self, invoice: InvoiceInput, email: EmailInput, options: OptionsInput = None) -> EmailSendResult:
+        """Create a Factur-X hybrid invoice and send it by email.
+
+        Builds the same PDF as :meth:`create_facturx`, then sends a real email
+        from your own verified domain. The file does not come back.
+
+        :param invoice: The invoice, as a model or a dict in the API's JSON shape.
+        :param email: The email, as an :class:`EmailMessage` or a dict in the API's JSON shape.
+        :param options: Extra rule sets such as ``RuleSet.BR_FR``, PDF language, logo,
+            brand colour, or your own PDF as the visual layer.
+        :returns: The message id. ``accepted`` means handed over for delivery, not yet
+            received by the recipient's server.
+        :raises InvoiceValidationError: The invoice or the email is invalid.
+        :raises InvoiceXmlApiError: With ``ErrorCode.EMAIL_DOMAIN_NOT_VERIFIED`` when the
+            sender's domain is not verified.
+        """
+        if invoice is None:
+            raise TypeError("invoice must not be None")
+        request = CreateInvoiceRequest(invoice=invoice, options=options)  # type: ignore[arg-type]
+        body = _serde.dumps({**request.to_dict(), "email": _email_fields(email)}).encode("utf-8")
+        response = self._execute("/v1/create/facturx/email", "application/json", body, accept_json=True)
+        return EmailSendResult.from_dict(self._read_json(response, "/v1/create/facturx/email"))
+
+    def email_embedded_facturx(self, pdf: FileInput, xml: FileInput, email: EmailInput, *,
+                               rules: RulesInput = None) -> EmailSendResult:
+        """Embed a CII invoice XML into an existing PDF and send the Factur-X PDF/A-3 by email.
+
+        Builds the same PDF as :meth:`embed_facturx`, always with the full rule set,
+        then sends a real email from your own verified domain. The file does not
+        come back.
+
+        :param pdf: The visual PDF.
+        :param xml: The CII XML.
+        :param email: The email, as an :class:`EmailMessage` or a dict in the API's JSON shape.
+        :param rules: Extra rule sets to apply before embedding, such as ``[RuleSet.BR_FR]``.
+        :returns: The message id. ``accepted`` means handed over for delivery, not yet
+            received by the recipient's server.
+        :raises InvoiceValidationError: The XML or the email is invalid.
+        :raises InvoiceXmlApiError: With ``ErrorCode.EMAIL_DOMAIN_NOT_VERIFIED`` when the
+            sender's domain is not verified.
+        """
+        parts: list[tuple[str, Any]] = [("pdf", to_upload(pdf)), ("xml", to_upload(xml))]
+        parts += _rule_parts(rules) + _email_parts(email)
+        response = self._post_form("/v1/embed/facturx/email", parts, accept_json=True)
+        return EmailSendResult.from_dict(self._read_json(response, "/v1/embed/facturx/email"))
+
     # ----------------------------------------------------------------- extract
 
     def extract_json(self, file: FileInput) -> InvoiceDocument:
@@ -220,6 +271,42 @@ def _rule_parts(rules: RulesInput) -> list[tuple[str, Any]]:
     if isinstance(rules, (str, RuleSet)):
         rules = [rules]
     return [("rules", rule.value if isinstance(rule, RuleSet) else str(rule)) for rule in rules]
+
+
+def _email_fields(email: EmailInput) -> dict[str, Any]:
+    """Return the email as sent, by the same rules on the JSON and the form routes.
+
+    Only ``cc`` and ``bcc`` take a list, because a form route would lose all but the
+    first item of any other field. They also take one address, without blank entries.
+    """
+    if email is None:
+        raise TypeError("email must not be None")
+    fields: dict[str, Any] = {}
+    for key, value in (email.to_dict() if isinstance(email, EmailMessage) else email).items():
+        if value is None:
+            continue
+        if key in ("cc", "bcc"):
+            addresses = _copy_addresses(value)
+            if addresses:
+                fields[key] = addresses
+        elif isinstance(value, str):
+            fields[key] = value
+        else:
+            raise TypeError(f"email.{key} takes a single value. Only cc and bcc take a list.")
+    return fields
+
+
+def _copy_addresses(value: Any) -> list[str]:
+    items = [value] if isinstance(value, str) else value
+    return [item.strip() for item in items if item is not None and item.strip()]
+
+
+def _email_parts(email: EmailInput) -> list[tuple[str, Any]]:
+    parts: list[tuple[str, Any]] = []
+    for key, value in _email_fields(email).items():
+        for item in [value] if isinstance(value, str) else value:
+            parts.append((f"email.{key}", item))
+    return parts
 
 
 def _multipart(parts: list[tuple[str, Any]]) -> tuple[str, bytes]:

@@ -17,7 +17,7 @@ pip install invoicexml-facturx
 
 ## Get an API key
 
-Sign up at [invoicexml.com/account/signup](https://www.invoicexml.com/account/signup) for a 30-day free trial with 100 credits. No credit card is needed. The client reads the key from the `INVOICEXML_API_KEY` environment variable, or you pass it as `api_key`.
+Sign up at [www.invoicexml.com/account/signup](https://www.invoicexml.com/account/signup) for a 30-day free trial with 100 credits. No credit card is needed. The client reads the key from the `INVOICEXML_API_KEY` environment variable, or you pass it as `api_key`.
 
 ## Create a Factur-X invoice
 
@@ -49,6 +49,8 @@ Totals and the VAT breakdown are calculated from the lines. The PDF is a Factur-
 | `create_facturx(invoice, options=None)` | `POST /v1/create/facturx` | Factur-X PDF/A-3 (`bytes`) |
 | `validate_facturx(pdf, *, rules=None)` | `POST /v1/validate/facturx` | `ValidationResult` |
 | `embed_facturx(pdf, xml, *, skip_validation=False, rules=None)` | `POST /v1/embed/facturx` | Factur-X PDF/A-3 (`bytes`) |
+| `email_facturx(invoice, email, options=None)` | `POST /v1/create/facturx/email` | `EmailSendResult` |
+| `email_embedded_facturx(pdf, xml, email, *, rules=None)` | `POST /v1/embed/facturx/email` | `EmailSendResult` |
 | `extract_json(file)` | `POST /v1/extract/json` | `InvoiceDocument` |
 | `extract_attachments(file)` | `POST /v1/extract/attachments` | ZIP of embedded documents (`bytes`) |
 
@@ -78,6 +80,25 @@ pdf = client.create_facturx(invoice)
 ```
 
 `MINIMUM` and `BASIC_WL` carry header data only and serve as booking aids. `BASIC` is the lowest profile the French mandate accepts, and `EXTENDED` adds data for complex invoicing.
+
+## Send an invoice by email
+
+Create the invoice and have it emailed to the recipient in one call, from your own domain. The invoice is validated exactly like on the create call:
+
+```python
+email = EmailMessage(from_="factures@votreentreprise.fr", to="client@example.com", from_name="Votre Entreprise",
+                     cc=["compta@votreentreprise.fr"], subject="Facture FA-2026-0042")
+result = client.email_facturx(invoice, email)
+print(result.status, result.message_id)
+```
+
+`email_embedded_facturx("facture.pdf", "facture.xml", email)` embeds your XML into your PDF first, always with full validation, and takes the same `rules` as `embed_facturx`. These calls send a real email and return the message id, not the file. The status `accepted` means the email was handed over for delivery, not yet that the recipient's server received it.
+
+The sender must be on a domain added and verified on the Verified email domains page of your dashboard. `cc` and `bcc` hold at most 2 addresses together. See the [email guide](https://www.invoicexml.com/docs/api/create/facturx/email).
+
+An unverified sender domain raises `InvoiceXmlApiError` with `ErrorCode.EMAIL_DOMAIN_NOT_VERIFIED`, `EMAIL_NOT_IN_PLAN` means [your plan does not include this](https://www.invoicexml.com/pricing), and `EMAIL_SENDING_DISABLED` means sending is disabled or paused for your account. None of these consume credits. A bad address raises `InvoiceValidationError` with the affected `email.*` field.
+
+Only HTTP 429 is retried, because nothing was sent. Other failures are never retried, since a second attempt could send a second email. After a timeout, a connection failure or a 503 with `ErrorCode.PROCESSING_TIMEOUT` (4023), which can happen while the send is in flight, the outcome is unknown, so check before you send it again.
 
 ## Rejected invoices
 
@@ -131,8 +152,8 @@ The client holds no connection state and is safe to share between threads. To se
 
 - **Rule sets updated on their legal effective dates.** New Factur-X, BR-FR and EN 16931 rule versions go live on the API the day they take legal effect. The rules run on the server, so you never update this package or redeploy for a new rule version.
 - **Validated before delivery.** Every document is checked against the official XSD and Schematron rules before it is returned.
-- **Zero data retention.** Invoices are processed in memory and purged when the response is delivered. Nothing is stored or logged, and nothing is used for AI training.
-- **Processing in Frankfurt.** All processing happens in the EU, in Frankfurt, Germany. See [invoicexml.com/trust](https://www.invoicexml.com/trust).
+- **Zero data retention.** Invoices are processed in memory and purged when the response is delivered. Nothing is stored or logged, and nothing is used for AI training. When you email an invoice, it goes to our email service for delivery, and we keep no copy.
+- **Processing in Frankfurt.** All processing happens in the EU, in Frankfurt, Germany. See [www.invoicexml.com/trust](https://www.invoicexml.com/trust).
 - **Integration assistance.** Questions about your integration go to [support@invoicexml.com](mailto:support@invoicexml.com), from setup to your first production invoice.
 
 ## Documentation

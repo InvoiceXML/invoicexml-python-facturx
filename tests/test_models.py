@@ -9,6 +9,8 @@ import pytest
 from conftest import sample_invoice
 from invoicexml_facturx import (
     AdditionalSupportingDocument,
+    EmailMessage,
+    EmailSendResult,
     InvoiceDocument,
     InvoiceNote,
     InvoiceOptions,
@@ -66,3 +68,30 @@ def test_bytes_are_base64():
     doc = AdditionalSupportingDocument(attachment=b"hello")
     assert doc.to_dict() == {"attachment": "aGVsbG8="}
     assert AdditionalSupportingDocument.from_dict({"attachment": "aGVsbG8="}).attachment == b"hello"
+
+
+def test_email_message_serializes_to_the_wire_keys():
+    message = EmailMessage(from_="factures@atelier.fr", to="c@client.fr", from_name="Atelier", reply_to="a@atelier.fr")
+
+    assert message.to_dict() == {"from": "factures@atelier.fr", "fromName": "Atelier", "to": "c@client.fr",
+                                 "replyTo": "a@atelier.fr"}
+
+
+def test_email_message_requires_sender_and_recipient():
+    with pytest.raises(TypeError):
+        EmailMessage(to="c@client.fr")  # type: ignore[call-arg]
+
+
+def test_printing_an_email_message_reveals_no_address_or_text():
+    message = EmailMessage(from_="factures@atelier.fr", to="c@client.fr", from_name="Atelier", cc=["cc@atelier.fr"],
+                           bcc=["bcc@atelier.fr"], reply_to="a@atelier.fr", subject="Facture", message="Bonjour")
+
+    for printed in (repr(message), str(message), f"{message}"):
+        for secret in ("factures@atelier.fr", "c@client.fr", "Atelier", "cc@atelier.fr", "bcc@atelier.fr",
+                       "a@atelier.fr", "Facture", "Bonjour"):
+            assert secret not in printed
+
+
+def test_email_send_result_reads_the_answer():
+    assert EmailSendResult.from_dict({"status": "accepted", "messageId": "0102abc", "new": 1}) == EmailSendResult(
+        status="accepted", message_id="0102abc")

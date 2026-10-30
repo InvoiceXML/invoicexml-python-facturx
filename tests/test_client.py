@@ -9,6 +9,8 @@ import pytest
 from conftest import fixture, sample_invoice
 from invoicexml_facturx import (
     AuthenticationError,
+    EmailMessage,
+    EmailSendResult,
     ErrorCode,
     FacturXClient,
     FacturXProfile,
@@ -26,6 +28,7 @@ from invoicexml_facturx.validation import LAYER_EN16931
 
 PDF = b"%PDF-1.7 stub"
 XML = '<?xml version="1.0"?><rsm:CrossIndustryInvoice/>'
+SENT = {"status": "accepted", "messageId": "0102abc"}
 
 
 def text(request) -> str:
@@ -163,6 +166,223 @@ def test_embed_facturx_sends_options(client, stub):
     body = text(stub.last)
     assert 'name="skipValidation"\r\n\r\ntrue\r\n' in body
     assert 'name="rules"\r\n\r\nbr-fr\r\n' in body
+
+
+# -------------------------------------------------------------------- email
+
+def test_email_facturx_posts_invoice_and_email_and_returns_the_message_id(client, stub):
+    stub.respond_json(200, SENT)
+
+    result = client.email_facturx(sample_invoice(), EmailMessage(from_="factures@atelier.fr", to="compta@client.fr"))
+
+    assert result == EmailSendResult(status="accepted", message_id="0102abc")
+    r = stub.last
+    assert r.method == "POST"
+    assert r.url == "https://api.invoicexml.com/v1/create/facturx/email"
+    assert r.header("Content-Type") == "application/json"
+    assert r.header("Accept") == "application/json"
+    sent = json.loads(r.body)
+    assert sent["invoice"]["invoiceNumber"] == "FA-2026-0042"
+    assert sent["email"] == {"from": "factures@atelier.fr", "to": "compta@client.fr"}, "unset fields are omitted"
+    assert "options" not in sent
+
+
+def test_email_facturx_sends_every_email_field_with_its_wire_key(client, stub):
+    stub.respond_json(200, SENT)
+
+    client.email_facturx(sample_invoice(), EmailMessage(
+        from_="factures@atelier.fr", to="compta@client.fr", from_name="Atelier", cc=["a@atelier.fr"],
+        bcc=["b@atelier.fr"], reply_to="aide@atelier.fr", subject="Facture", message="Bonjour"),
+        InvoiceOptions(rules=[RuleSet.BR_FR]))
+
+    sent = json.loads(stub.last.body)
+    assert sent["options"] == {"rules": ["br-fr"]}
+    assert sent["email"] == {"from": "factures@atelier.fr", "fromName": "Atelier", "to": "compta@client.fr",
+                             "cc": ["a@atelier.fr"], "bcc": ["b@atelier.fr"], "replyTo": "aide@atelier.fr",
+                             "subject": "Facture", "message": "Bonjour"}
+
+
+def test_email_accepts_plain_dicts_and_drops_none(client, stub):
+    stub.respond_json(200, SENT)
+
+    client.email_facturx({"invoiceNumber": "X-1"}, {"from": "factures@atelier.fr", "to": "c@client.fr", "cc": None})
+
+    assert json.loads(stub.last.body) == {"invoice": {"invoiceNumber": "X-1"},
+                                          "email": {"from": "factures@atelier.fr", "to": "c@client.fr"}}
+
+
+def test_email_embedded_facturx_sends_files_and_form_fields(client, stub):
+    stub.respond_json(200, SENT)
+
+    result = client.email_embedded_facturx(PDF, FileUpload.xml(XML), EmailMessage(
+        from_="factures@atelier.fr", to="compta@client.fr", from_name="Atelier Numérique",
+        cc=["a@atelier.fr", "b@atelier.fr"], bcc=["c@atelier.fr"], reply_to="aide@atelier.fr",
+        subject="Facture", message="Bonjour"))
+
+    assert result.status == "accepted"
+    assert result.message_id == "0102abc"
+    r = stub.last
+    assert r.url == "https://api.invoicexml.com/v1/embed/facturx/email"
+    assert r.header("Accept") == "application/json"
+    assert r.header("Content-Type").startswith("multipart/form-data; boundary=")
+    body = text(r)
+    assert 'name="pdf"; filename="invoice.pdf"' in body
+    assert 'name="xml"; filename="invoice.xml"' in body
+    assert 'name="email.from"\r\n\r\nfactures@atelier.fr\r\n' in body
+    assert 'name="email.fromName"\r\n\r\nAtelier Numérique\r\n' in body
+    assert 'name="email.to"\r\n\r\ncompta@client.fr\r\n' in body
+    assert 'name="email.cc"\r\n\r\na@atelier.fr\r\n' in body
+    assert 'name="email.cc"\r\n\r\nb@atelier.fr\r\n' in body
+    assert body.count('name="email.cc"') == 2, "one form part per address"
+    assert 'name="email.bcc"\r\n\r\nc@atelier.fr\r\n' in body
+    assert 'name="email.replyTo"\r\n\r\naide@atelier.fr\r\n' in body
+    assert 'name="email.subject"\r\n\r\nFacture\r\n' in body
+    assert 'name="email.message"\r\n\r\nBonjour\r\n' in body
+    assert "skipValidation" not in body
+    assert 'name="rules"' not in body
+
+
+def test_email_embedded_facturx_sends_rule_sets(client, stub):
+    stub.respond_json(200, SENT)
+
+    client.email_embedded_facturx(PDF, XML.encode(), EmailMessage(from_="f@atelier.fr", to="c@client.fr"),
+                                  rules=[RuleSet.BR_FR])
+
+    assert text(stub.last).count('name="rules"\r\n\r\nbr-fr\r\n') == 1
+
+
+def test_email_embedded_facturx_omits_unset_fields(client, stub):
+    stub.respond_json(200, SENT)
+
+    client.email_embedded_facturx(PDF, XML.encode(), {"from": "f@atelier.fr", "to": "c@client.fr", "cc": None})
+
+    body = text(stub.last)
+    assert body.count('name="email.') == 2
+    assert 'name="email.from"' in body
+    assert 'name="email.to"' in body
+
+
+def test_a_single_copy_address_is_one_part_not_one_per_letter(client, stub):
+    stub.respond_json(200, SENT).respond_json(200, SENT)
+
+    client.email_embedded_facturx(PDF, XML.encode(), {"from": "f@atelier.fr", "to": "c@client.fr", "cc": "a@atelier.fr"})
+    client.email_embedded_facturx(PDF, XML.encode(), EmailMessage(from_="f@atelier.fr", to="c@client.fr",
+                                                                  bcc="b@atelier.fr"))
+
+    assert text(stub.requests[0]).count('name="email.cc"') == 1
+    assert text(stub.requests[1]).count('name="email.bcc"') == 1
+
+
+def test_email_requires_an_invoice_and_an_email(client):
+    message = EmailMessage(from_="f@atelier.fr", to="c@client.fr")
+    with pytest.raises(TypeError):
+        client.email_facturx(None, message)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        client.email_facturx(sample_invoice(), None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        client.email_embedded_facturx(PDF, XML.encode(), None)  # type: ignore[arg-type]
+
+
+def test_unverified_sender_domain_surfaces_its_error_code(client, stub):
+    stub.respond_json(400, {"title": "Sending domain not verified", "errorCode": 4022,
+                            "detail": "The sending domain atelier.fr is not verified yet."})
+
+    with pytest.raises(InvoiceXmlApiError) as info:
+        client.email_facturx(sample_invoice(), EmailMessage(from_="f@atelier.fr", to="c@client.fr"))
+
+    assert info.value.status_code == 400
+    assert info.value.error_code == ErrorCode.EMAIL_DOMAIN_NOT_VERIFIED
+    assert not isinstance(info.value, InvoiceValidationError)
+
+
+@pytest.mark.parametrize("code, name", [(4020, "EMAIL_NOT_IN_PLAN"), (4021, "EMAIL_SENDING_DISABLED")])
+def test_blocked_sending_surfaces_its_error_code(client, stub, code, name):
+    stub.respond_json(403, {"title": "Forbidden", "errorCode": code})
+
+    with pytest.raises(InvoiceXmlApiError) as info:
+        client.email_embedded_facturx(PDF, XML.encode(), EmailMessage(from_="f@atelier.fr", to="c@client.fr"))
+
+    assert info.value.status_code == 403
+    assert info.value.error_code == ErrorCode[name]
+
+
+def test_email_field_findings_arrive_as_a_validation_error(client, stub):
+    stub.respond_json(400, {"title": "Invalid request", "errorCode": 4002,
+                            "errors": [{"message": "to is not a valid address.", "fields": ["email.to"]}]})
+
+    with pytest.raises(InvoiceValidationError) as info:
+        client.email_facturx(sample_invoice(), EmailMessage(from_="f@atelier.fr", to="nope"))
+
+    assert info.value.error_code == ErrorCode.MODEL_VALIDATION
+    assert info.value.errors[0].fields == ["email.to"]
+
+
+def test_email_is_retried_after_a_rate_limit_only(client, stub, sleeps):
+    stub.respond_json(429, {"title": "Too many requests", "errorCode": 4019}, Retry_After="2")
+    stub.respond_json(200, SENT)
+
+    assert client.email_facturx(sample_invoice(), EmailMessage(from_="f@atelier.fr", to="c@client.fr")).status == "accepted"
+    assert sleeps == [2.0]
+    assert len(stub.requests) == 2
+
+
+def test_email_is_not_retried_after_a_server_error(client, stub):
+    stub.respond(502, "bad gateway", "text/plain")
+
+    with pytest.raises(InvoiceXmlApiError):
+        client.email_facturx(sample_invoice(), EmailMessage(from_="f@atelier.fr", to="c@client.fr"))
+    assert len(stub.requests) == 1
+
+
+def test_email_is_not_retried_after_a_network_failure(client, stub):
+    stub.fail(TimeoutError("timed out"))
+
+    with pytest.raises(InvoiceXmlConnectionError):
+        client.email_embedded_facturx(PDF, XML.encode(), EmailMessage(from_="f@atelier.fr", to="c@client.fr"))
+    assert len(stub.requests) == 1
+
+
+@pytest.mark.parametrize("key", ["from", "fromName", "to", "replyTo", "subject", "message"])
+def test_email_refuses_a_list_in_a_single_value_field_on_both_route_types(client, stub, key):
+    email = {"from": "f@atelier.fr", "to": "c@client.fr", key: ["un@atelier.fr", "deux@atelier.fr"]}
+
+    with pytest.raises(TypeError, match=f"email.{key}"):
+        client.email_facturx(sample_invoice(), email)
+    with pytest.raises(TypeError, match=f"email.{key}"):
+        client.email_embedded_facturx(PDF, XML.encode(), email)
+    assert stub.requests == []
+
+
+def test_email_message_refuses_a_list_in_a_single_value_field(client, stub):
+    with pytest.raises(TypeError, match="email.to"):
+        client.email_facturx(sample_invoice(), EmailMessage(from_="f@atelier.fr", to=["a@client.fr", "b@client.fr"]))  # type: ignore[arg-type]
+    assert stub.requests == []
+
+
+def test_blank_copy_addresses_are_dropped_on_both_route_types(client, stub):
+    stub.respond_json(200, SENT).respond_json(200, SENT)
+    email = EmailMessage(from_="f@atelier.fr", to="c@client.fr", cc=[" ", " a@atelier.fr "], bcc=[""])
+
+    client.email_facturx(sample_invoice(), email)
+    client.email_embedded_facturx(PDF, XML.encode(), email)
+
+    assert json.loads(stub.requests[0].body)["email"] == {"from": "f@atelier.fr", "to": "c@client.fr",
+                                                          "cc": ["a@atelier.fr"]}
+    body = text(stub.requests[1])
+    assert body.count('name="email.cc"') == 1
+    assert 'name="email.cc"\r\n\r\na@atelier.fr\r\n' in body
+    assert 'name="email.bcc"' not in body
+
+
+def test_a_single_copy_address_in_a_dict_is_a_list_on_both_route_types(client, stub):
+    stub.respond_json(200, SENT).respond_json(200, SENT)
+    email = {"from": "f@atelier.fr", "to": "c@client.fr", "cc": "a@atelier.fr"}
+
+    client.email_facturx(sample_invoice(), email)
+    client.email_embedded_facturx(PDF, XML.encode(), email)
+
+    assert json.loads(stub.requests[0].body)["email"]["cc"] == ["a@atelier.fr"]
+    assert 'name="email.cc"\r\n\r\na@atelier.fr\r\n' in text(stub.requests[1])
 
 
 # ------------------------------------------------------------------ extract
