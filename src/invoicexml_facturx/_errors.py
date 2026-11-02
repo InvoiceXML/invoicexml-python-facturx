@@ -60,6 +60,8 @@ class ErrorCode(enum.IntEnum):
     """The sender's domain is not verified yet. Check it on the Verified email domains page of your dashboard."""
     PROCESSING_TIMEOUT = 4023
     """The request exceeded the processing time limit (HTTP 503)."""
+    TOTALS_MISMATCH = 4024
+    """The amounts read from the PDF do not add up to its printed total. Billed; correct invoiceData and create the invoice from it."""
 
 
 class InvoiceXmlError(Exception):
