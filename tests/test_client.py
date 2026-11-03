@@ -24,6 +24,7 @@ from invoicexml_facturx import (
     PdfLanguage,
     RateLimitError,
     RuleSet,
+    UblProfile,
     ValidationReport,
 )
 from invoicexml_facturx.validation import LAYER_EN16931
@@ -31,6 +32,7 @@ from invoicexml_facturx.validation import LAYER_EN16931
 PDF = b"%PDF-1.7 stub"
 XML = '<?xml version="1.0"?><rsm:CrossIndustryInvoice/>'
 SENT = {"status": "accepted", "messageId": "0102abc"}
+CREATE_XML = [("create_cii", "/v1/create/cii"), ("create_ubl", "/v1/create/ubl")]
 CONVERT_TO_XML = [("convert_facturx_to_ubl", "/v1/convert/facturx/to/ubl"),
                   ("convert_facturx_to_cii", "/v1/convert/facturx/to/cii")]
 CONVERT_TO_HYBRID = [("convert_cii_to_facturx", "/v1/convert/cii/to/facturx"),
@@ -108,6 +110,63 @@ def test_create_rejection_carries_findings(client, stub):
 def test_create_requires_an_invoice(client):
     with pytest.raises(TypeError):
         client.create_facturx(None)  # type: ignore[arg-type]
+    for method in ("create_cii", "create_ubl"):
+        with pytest.raises(TypeError):
+            getattr(client, method)(None)
+
+
+@pytest.mark.parametrize("method, route", CREATE_XML)
+def test_create_xml_posts_json_and_returns_the_xml(client, stub, method, route):
+    stub.respond(200, XML, "application/xml", Content_Disposition='attachment; filename="invoice-FA-2026-0042.xml"')
+
+    assert getattr(client, method)(sample_invoice()) == XML
+
+    r = stub.last
+    assert r.url == "https://api.invoicexml.com" + route
+    assert r.header("Content-Type") == "application/json"
+    assert r.header("Accept") is None
+    sent = json.loads(r.body)
+    assert sent["invoice"]["invoiceNumber"] == "FA-2026-0042"
+    assert "options" not in sent
+
+
+@pytest.mark.parametrize("method, route", CREATE_XML)
+def test_create_xml_accepts_plain_dicts(client, stub, method, route):
+    stub.respond(200, XML, "application/xml")
+
+    getattr(client, method)(sample_invoice().to_dict(), {"language": "DE", "rules": ["br-fr"]})
+
+    sent = json.loads(stub.last.body)
+    assert sent["invoice"]["invoiceNumber"] == "FA-2026-0042"
+    assert sent["options"] == {"language": "DE", "rules": ["br-fr"]}
+
+
+@pytest.mark.parametrize("method, route", CREATE_XML)
+def test_create_xml_rejection_carries_findings(client, stub, method, route):
+    stub.respond_json(400, fixture("create-400.json"))
+
+    with pytest.raises(InvoiceValidationError) as info:
+        getattr(client, method)(sample_invoice())
+
+    assert info.value.errors[0].rule == "BR-CO-26"
+
+
+def test_create_cii_sends_rules_and_language(client, stub):
+    stub.respond(200, XML, "application/xml")
+
+    client.create_cii(sample_invoice(), InvoiceOptions(rules=[RuleSet.BR_FR], language=PdfLanguage.FR))
+
+    assert json.loads(stub.last.body)["options"] == {"rules": ["br-fr"], "language": "FR"}
+
+
+def test_create_ubl_sends_profile_rules_and_language(client, stub):
+    stub.respond(200, XML, "application/xml")
+
+    client.create_ubl(sample_invoice(), InvoiceOptions(profile=UblProfile.PEPPOL_BIS_3, rules=[RuleSet.BR_FR],
+                                                       language=PdfLanguage.FR))
+
+    assert stub.last.url.endswith("/v1/create/ubl")
+    assert json.loads(stub.last.body)["options"] == {"profile": "peppol-bis-3", "rules": ["br-fr"], "language": "FR"}
 
 
 # ----------------------------------------------------------------- validate

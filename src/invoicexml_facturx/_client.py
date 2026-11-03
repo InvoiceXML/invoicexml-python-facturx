@@ -108,11 +108,39 @@ class FacturXClient:
         :returns: The PDF bytes.
         :raises InvoiceValidationError: The invoice violates the rule set.
         """
-        if invoice is None:
-            raise TypeError("invoice must not be None")
-        request = CreateInvoiceRequest(invoice=invoice, options=options)  # type: ignore[arg-type]
-        body = _serde.dumps(request.to_dict()).encode("utf-8")
-        return self._execute("/v1/create/facturx", "application/json", body, accept_json=False).body
+        return self._post_json("/v1/create/facturx", invoice, options).body
+
+    def create_cii(self, invoice: InvoiceInput, options: OptionsInput = None) -> str:
+        """Create a plain UN/CEFACT CII invoice XML, without a PDF.
+
+        The XML declares the EN 16931 profile, so :meth:`embed_facturx` takes it as is
+        to turn your own PDF into a Factur-X invoice. Totals and the VAT breakdown are
+        calculated from the lines when omitted.
+
+        :param invoice: The invoice, as a model or a dict in the API's JSON shape.
+        :param options: Extra rule sets such as ``RuleSet.BR_FR``, and the ``language`` of
+            default texts such as the payment terms. The PDF settings are ignored.
+        :returns: The XML document.
+        :raises InvoiceValidationError: The invoice violates the rule set.
+        """
+        return self._post_json("/v1/create/cii", invoice, options).body.decode("utf-8")
+
+    def create_ubl(self, invoice: InvoiceInput, options: OptionsInput = None) -> str:
+        """Create a UBL 2.1 invoice XML, without a PDF.
+
+        ``options.profile`` picks the CustomizationID the XML declares and the rule set
+        the invoice is validated against, Peppol BIS Billing 3.0 when omitted (see
+        :class:`UblProfile`). Totals and the VAT breakdown are calculated from the lines
+        when omitted.
+
+        :param invoice: The invoice, as a model or a dict in the API's JSON shape.
+        :param options: The UBL ``profile``, extra rule sets such as ``RuleSet.BR_FR``, and
+            the ``language`` of default texts such as the payment terms. The PDF settings
+            are ignored.
+        :returns: The XML document.
+        :raises InvoiceValidationError: The invoice violates the rule set.
+        """
+        return self._post_json("/v1/create/ubl", invoice, options).body.decode("utf-8")
 
     # ---------------------------------------------------------------- validate
 
@@ -359,6 +387,13 @@ class FacturXClient:
         return self._post_form("/v1/extract/attachments", [("file", to_upload(file))]).body
 
     # ---------------------------------------------------------------- plumbing
+
+    def _post_json(self, path: str, invoice: InvoiceInput, options: OptionsInput) -> TransportResponse:
+        if invoice is None:
+            raise TypeError("invoice must not be None")
+        request = CreateInvoiceRequest(invoice=invoice, options=options)  # type: ignore[arg-type]
+        body = _serde.dumps(request.to_dict()).encode("utf-8")
+        return self._execute(path, "application/json", body, accept_json=False)
 
     def _post_form(self, path: str, parts: list[tuple[str, Any]], accept_json: bool = False,
                    *, retry_rate_limit: bool = True) -> TransportResponse:

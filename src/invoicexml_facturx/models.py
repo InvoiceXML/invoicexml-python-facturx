@@ -26,6 +26,23 @@ class PdfLanguage(str, enum.Enum):
     """French."""
 
 
+class UblProfile(str, enum.Enum):
+    """UBL profile of an invoice created by ``create_ubl``."""
+
+    EN16931 = "en16931"
+    """Plain EN 16931."""
+    PEPPOL_BIS_3 = "peppol-bis-3"
+    """Peppol BIS Billing 3.0, the default."""
+    NLCIUS = "nlcius"
+    """The Dutch NLCIUS."""
+    EHF = "ehf"
+    """The Norwegian EHF."""
+    XRECHNUNG = "xrechnung"
+    """The German XRechnung, in UBL syntax."""
+    PINT = "pint"
+    """Peppol PINT."""
+
+
 class RuleSet(str, enum.Enum):
     """Extra national rule sets, validated on top of the rules of the profile an invoice declares."""
 
@@ -986,20 +1003,23 @@ class InvoiceDocument(Model):
 class InvoiceOptions(Model):
     """Optional rendering and processing settings. Defaults apply when omitted."""
 
+    profile: UblProfile | str | None = None
+    """UBL profile of ``create_ubl``: picks the CustomizationID the XML declares and the rule set the invoice is validated against. ``UblProfile.PEPPOL_BIS_3`` when omitted. Ignored by the other create methods."""
     rules: list[RuleSet | str] | None = None
-    """Extra rule sets to validate the invoice against, on top of the rules of its declared profile and without changing that profile. ``RuleSet.BR_FR`` applies the French mandate's BR-FR rules and needs at least the BASIC profile. Violations reject the request with the official rule identifiers."""
+    """Extra rule sets to validate the invoice against, on top of the rules of its declared profile and without changing that profile. ``RuleSet.BR_FR`` applies the French mandate's BR-FR rules and, on Factur-X and CII, needs at least the BASIC profile. Violations reject the request with the official rule identifiers."""
     language: PdfLanguage | str | None = None
-    """Language of the rendered PDF template. English when omitted."""
+    """Language of the rendered PDF template and of the default texts written into the XML when the invoice leaves them empty, such as the payment terms. English when omitted."""
     brand_color: str | None = None
     """Primary brand colour in ``#RRGGBB`` form, applied to headings and accent backgrounds of the rendered PDF template. Body text is never recoloured."""
     pdf_url: str | None = None
-    """Public http(s) URL of your own PDF to use as the visual layer. The generated XML is embedded into that PDF instead of the rendered template, so ``language``, ``brand_color``, ``logo_url`` and ``include_advanced_properties`` are ignored."""
+    """Public http(s) URL of your own PDF to use as the visual layer. The generated XML is embedded into that PDF instead of the rendered template, so ``language``, ``brand_color``, ``logo_url`` and ``include_advanced_properties`` are ignored. Ignored by the XML create methods."""
     logo_url: str | None = None
     """Public URL of the seller's logo (PNG or JPEG, at most 2 MB and 4 megapixels), printed top left on the rendered PDF template and scaled to fit a 170 x 48 pt box."""
     include_advanced_properties: bool | None = None
     """When true, the rendered PDF gains an "Electronic invoice details" section listing technical properties that a classic layout does not show, such as the specification identifier, the business process, party identifiers and electronic addresses. Defaults to false."""
 
     _FIELDS: ClassVar[tuple[FieldSpec, ...]] = (
+        FieldSpec("profile", "profile", ("enum", "UblProfile")),
         FieldSpec("rules", "rules", ("list", ("enum", "RuleSet"))),
         FieldSpec("language", "language", ("enum", "PdfLanguage")),
         FieldSpec("brand_color", "brandColor", "str"),
@@ -1068,6 +1088,7 @@ __all__ = [
     "SellerLegalRegistration",
     "SellerParty",
     "SellerPostalAddress",
+    "UblProfile",
     "VatBreakdown",
     "VatCategoryCode",
 ]

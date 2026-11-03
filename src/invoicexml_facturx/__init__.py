@@ -1,9 +1,9 @@
 """Python client for Factur-X e-invoices via the InvoiceXML API.
 
-Create Factur-X PDF/A-3 hybrids from the EN 16931 model, validate incoming
-files (optionally against the French BR-FR rules), embed CII XML into existing
-PDFs, render CII XML as PDF, convert between formats, and extract invoices back
-into the model.
+Create Factur-X PDF/A-3 hybrids and plain CII or UBL XML from the EN 16931
+model, validate incoming files (optionally against the French BR-FR rules),
+embed CII XML into existing PDFs, render CII XML as PDF, convert between
+formats, and extract invoices back into the model.
 
 >>> from invoicexml_facturx import FacturXClient
 >>> client = FacturXClient()          # reads INVOICEXML_API_KEY

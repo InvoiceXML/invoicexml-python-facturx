@@ -47,6 +47,8 @@ Totals and the VAT breakdown are calculated from the lines. The PDF is a Factur-
 | Method | Endpoint | Returns |
 |---|---|---|
 | `create_facturx(invoice, options=None)` | `POST /v1/create/facturx` | Factur-X PDF/A-3 (`bytes`) |
+| `create_cii(invoice, options=None)` | [`POST /v1/create/cii`](https://www.invoicexml.com/docs/api/create/cii) | CII XML (`str`) |
+| `create_ubl(invoice, options=None)` | [`POST /v1/create/ubl`](https://www.invoicexml.com/docs/api/create/ubl) | UBL XML (`str`) |
 | `validate_facturx(pdf, *, rules=None)` | `POST /v1/validate/facturx` | `ValidationResult` |
 | `validate_facturx_report(pdf, *, rules=None, validation_language=None)` | `POST /v1/validate/facturx/report` | `ValidationReport` |
 | `embed_facturx(pdf, xml, *, skip_validation=False, rules=None)` | `POST /v1/embed/facturx` | Factur-X PDF/A-3 (`bytes`) |
@@ -88,6 +90,25 @@ pdf = client.create_facturx(invoice)
 ```
 
 `MINIMUM` and `BASIC_WL` carry header data only and serve as booking aids. `BASIC` is the lowest profile the French mandate accepts, and `EXTENDED` adds data for complex invoicing.
+
+## Use your own PDF layout
+
+To keep the PDF your own system prints, create the CII XML from the same invoice object and embed it into that PDF. The XML declares the EN 16931 profile, so `embed_facturx` takes it as is:
+
+```python
+xml = client.create_cii(invoice, InvoiceOptions(rules=[RuleSet.BR_FR], language=PdfLanguage.FR))
+pdf = client.embed_facturx("my-invoice.pdf", FileUpload.xml(xml), rules=[RuleSet.BR_FR])
+```
+
+`language` sets the default texts written into the XML, such as the payment terms. See the [create CII guide](https://www.invoicexml.com/docs/api/create/cii).
+
+## Create a UBL invoice
+
+`create_ubl` builds a UBL 2.1 XML from the same invoice object, validated against the rule set of the profile you pick (Peppol BIS Billing 3.0 when omitted):
+
+```python
+xml = client.create_ubl(invoice, InvoiceOptions(profile=UblProfile.PEPPOL_BIS_3))
+```
 
 ## Send an invoice by email
 

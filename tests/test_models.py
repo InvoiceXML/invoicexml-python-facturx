@@ -17,6 +17,7 @@ from invoicexml_facturx import (
     PriceDetails,
     RuleSet,
     SellerIdentifier,
+    UblProfile,
     VatCategoryCode,
 )
 from invoicexml_facturx._serde import dumps, loads
@@ -56,6 +57,13 @@ def test_rules_round_trip():
     assert InvoiceOptions(rules=["br-fr"]).to_dict() == {"rules": ["br-fr"]}
     assert InvoiceOptions.from_dict({"rules": ["br-fr"]}).rules == [RuleSet.BR_FR]
     assert InvoiceOptions.from_dict({"rules": ["future-set"]}).rules == ["future-set"]
+
+
+def test_ubl_profile_round_trip():
+    assert InvoiceOptions(profile=UblProfile.PEPPOL_BIS_3).to_dict() == {"profile": "peppol-bis-3"}
+    assert InvoiceOptions(profile="nlcius").to_dict() == {"profile": "nlcius"}
+    assert InvoiceOptions.from_dict({"profile": "xrechnung"}).profile is UblProfile.XRECHNUNG
+    assert InvoiceOptions.from_dict({"profile": "future-profile"}).profile == "future-profile"
 
 
 def test_records_take_positional_arguments():
