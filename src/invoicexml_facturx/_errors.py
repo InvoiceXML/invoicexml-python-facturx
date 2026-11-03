@@ -139,7 +139,7 @@ class PayloadTooLargeError(InvoiceXmlApiError):
 
 
 class RateLimitError(InvoiceXmlApiError):
-    """HTTP 429 after the automatic retries are used up, or the first 429 of a transform call.
+    """HTTP 429 after the automatic retries are used up, or the first 429 of a transform or parse call.
 
     Too many requests for this API key are being processed at the same time.
     A 429 is not billed.

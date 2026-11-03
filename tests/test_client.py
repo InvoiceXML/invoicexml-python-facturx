@@ -20,6 +20,9 @@ from invoicexml_facturx import (
     InvoiceValidationError,
     InvoiceXmlApiError,
     InvoiceXmlConnectionError,
+    ParseConfidence,
+    ParseConfidenceAreas,
+    ParsedInvoice,
     PayloadTooLargeError,
     PdfLanguage,
     RateLimitError,
@@ -502,15 +505,16 @@ def test_a_single_copy_address_in_a_dict_is_a_list_on_both_route_types(client, s
 
 # ------------------------------------------------------------------- render
 
-def test_render_cii_sends_only_what_is_set(client, stub):
+def test_render_xml_sends_only_what_is_set(client, stub):
     stub.respond(200, PDF, "application/pdf").respond(200, PDF, "application/pdf").respond(200, PDF, "application/pdf")
 
-    assert client.render_cii_to_pdf(XML.encode()) == PDF
-    client.render_cii_to_pdf(XML.encode(), language=PdfLanguage.FR, logo_url="https://example.com/logo.png",
+    assert client.render_xml_to_pdf(XML.encode()) == PDF
+    client.render_xml_to_pdf(XML.encode(), language=PdfLanguage.FR, logo_url="https://example.com/logo.png",
                              include_qr_code=True)
-    client.render_cii_to_pdf(XML.encode(), include_qr_code=False)
+    client.render_xml_to_pdf(XML.encode(), include_qr_code=False)
 
-    assert stub.requests[0].url == "https://api.invoicexml.com/v1/render/cii/to/pdf"
+    assert stub.requests[0].url == "https://api.invoicexml.com/v1/render/xml/to/pdf"
+    assert 'name="file"; filename="invoice.xml"' in text(stub.requests[0])
     assert part_names(stub.requests[0]) == ["file"]
     assert part_names(stub.requests[1]) == ["file", "language", "logoUrl", "includeQrCode"]
     assert 'name="language"\r\n\r\nfr\r\n' in text(stub.requests[1])
@@ -673,6 +677,65 @@ def test_extract_attachments_returns_zip(client, stub):
     assert stub.last.url.endswith("/v1/extract/attachments")
 
 
+# -------------------------------------------------------------------- parse
+
+def test_parse_json_returns_the_invoice_confidence_and_language(client, stub, tmp_path):
+    pdf = tmp_path / "scan.pdf"
+    pdf.write_bytes(PDF)
+    payload = json.loads(fixture("extract-json.json"))
+    payload["confidence"] = {"overall": 0.9, "areas": {"sellerIdentification": 1, "buyerIdentification": 0.95,
+                                                       "taxCalculation": None, "lineItems": 0.75}}
+    payload["language"] = "fr"
+    stub.respond_json(200, payload)
+
+    parsed = client.parse_json(pdf)
+
+    r = stub.last
+    assert r.url == "https://api.invoicexml.com/v1/parse/json"
+    assert r.header("Accept") == "application/json"
+    assert part_names(r) == ["file"]
+    assert 'name="file"; filename="scan.pdf"' in text(r)
+    assert "Content-Type: application/pdf" in text(r)
+    assert parsed.invoice.invoice_number == "FA-2026-0042"
+    assert parsed.invoice.totals.grand_total_amount == Decimal("3541.50")
+    assert parsed.confidence == ParseConfidence(
+        overall=Decimal("0.9"),
+        areas=ParseConfidenceAreas(seller_identification=Decimal(1), buyer_identification=Decimal("0.95"),
+                                   tax_calculation=None, line_items=Decimal("0.75")))
+    assert parsed.language == "fr"
+
+
+def test_parse_json_without_confidence_or_language(client, stub):
+    stub.respond_json(200, {"invoice": {"invoiceNumber": "FA-1"}})
+
+    parsed = client.parse_json(PDF)
+
+    assert parsed == ParsedInvoice(invoice=parsed.invoice)
+    assert parsed.invoice.invoice_number == "FA-1"
+    assert parsed.confidence is None
+    assert parsed.language is None
+
+
+def test_parse_json_rate_limit_makes_one_request_and_raises(client, stub, sleeps):
+    stub.respond_json(429, {"title": "Too many requests", "errorCode": 4019}, Retry_After="2")
+
+    with pytest.raises(RateLimitError) as info:
+        client.parse_json(PDF)
+
+    assert len(stub.requests) == 1
+    assert sleeps == []
+    assert info.value.retry_after == 2.0
+
+
+def test_parse_json_refusal_maps_to_api_error(client, stub):
+    stub.respond_json(400, {"title": "Not an invoice", "errorCode": 4008})
+
+    with pytest.raises(InvoiceXmlApiError) as info:
+        client.parse_json(PDF)
+
+    assert info.value.error_code == ErrorCode.NOT_AN_INVOICE
+
+
 # ------------------------------------------------------------------ retries
 
 def test_retries_after_rate_limit_using_retry_after_seconds(client, stub, sleeps):
@@ -698,13 +761,13 @@ def test_render_convert_and_report_retry_after_a_rate_limit(client, stub, sleeps
     stub.respond_json(429, {}, Retry_After="1").respond(200, XML, "application/xml")
     stub.respond_json(429, {}, Retry_After="1").respond(200, PDF, "application/pdf", X_Invoice_Valid="true")
 
-    client.render_cii_to_pdf(FileUpload.xml(XML))
+    client.render_xml_to_pdf(FileUpload.xml(XML))
     client.convert_facturx_to_ubl(PDF)
     client.validate_facturx_report(PDF)
 
     assert [request.url.removeprefix("https://api.invoicexml.com") for request in stub.requests] == [
-        "/v1/render/cii/to/pdf",
-        "/v1/render/cii/to/pdf",
+        "/v1/render/xml/to/pdf",
+        "/v1/render/xml/to/pdf",
         "/v1/convert/facturx/to/ubl",
         "/v1/convert/facturx/to/ubl",
         "/v1/validate/facturx/report",
