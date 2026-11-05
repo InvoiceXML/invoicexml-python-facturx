@@ -76,6 +76,8 @@ class VatCategoryCode:
 class InvoiceTypeCode:
     """UNTDID 1001 invoice type codes accepted by the API."""
 
+    SELF_BILLED_CREDIT_NOTE = "261"
+    """Self-billed credit note: credits a self-billed invoice."""
     PARTIAL_INVOICE = "326"
     """Partial invoice."""
     INVOICE = "380"
@@ -90,6 +92,8 @@ class InvoiceTypeCode:
     """Prepayment invoice."""
     SELF_BILLED_INVOICE = "389"
     """Self-billed invoice."""
+    SELF_BILLED_PREPAYMENT_INVOICE = "500"
+    """Self-billed prepayment invoice: a prepayment request the buyer issues."""
     PARTIAL_CONSTRUCTION_INVOICE = "875"
     """Partial construction invoice."""
     PARTIAL_FINAL_CONSTRUCTION_INVOICE = "876"

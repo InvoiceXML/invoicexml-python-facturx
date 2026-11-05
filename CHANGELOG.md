@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add `InvoiceTypeCode.SELF_BILLED_CREDIT_NOTE` (261) and `InvoiceTypeCode.SELF_BILLED_PREPAYMENT_INVOICE` (500).
+
 ## 0.5.0
 
 - Add `parse_json`, which has AI read a typed, scanned or photographed PDF invoice into the invoice model and returns a `ParsedInvoice` with confidence scores per area and the invoice's language. A 429 on this call is not retried automatically.

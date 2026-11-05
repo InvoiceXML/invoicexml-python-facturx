@@ -92,6 +92,7 @@ VAT_CATEGORY_CODES = [
 ]
 
 INVOICE_TYPE_CODES = [
+    ("SELF_BILLED_CREDIT_NOTE", "261", "Self-billed credit note: credits a self-billed invoice."),
     ("PARTIAL_INVOICE", "326", "Partial invoice."),
     ("INVOICE", "380", "Commercial invoice."),
     ("CREDIT_NOTE", "381", "Credit note."),
@@ -99,6 +100,7 @@ INVOICE_TYPE_CODES = [
     ("CORRECTED_INVOICE", "384", "Corrected invoice."),
     ("PREPAYMENT_INVOICE", "386", "Prepayment invoice."),
     ("SELF_BILLED_INVOICE", "389", "Self-billed invoice."),
+    ("SELF_BILLED_PREPAYMENT_INVOICE", "500", "Self-billed prepayment invoice: a prepayment request the buyer issues."),
     ("PARTIAL_CONSTRUCTION_INVOICE", "875", "Partial construction invoice."),
     ("PARTIAL_FINAL_CONSTRUCTION_INVOICE", "876", "Partial final construction invoice."),
     ("FINAL_CONSTRUCTION_INVOICE", "877", "Final construction invoice."),
