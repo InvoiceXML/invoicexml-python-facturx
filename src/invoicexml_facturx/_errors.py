@@ -53,7 +53,7 @@ class ErrorCode(enum.IntEnum):
     TOO_MANY_REQUESTS = 4019
     """Too many concurrent requests for this API key. Retryable after the ``Retry-After`` delay."""
     EMAIL_NOT_IN_PLAN = 4020
-    """Your plan does not include email delivery. See https://www.invoicexml.com/pricing."""
+    """Your plan does not include email delivery. The pricing page at https://www.invoicexml.com/pricing lists the plans."""
     EMAIL_SENDING_DISABLED = 4021
     """Email sending is disabled or paused for this account."""
     EMAIL_DOMAIN_NOT_VERIFIED = 4022
